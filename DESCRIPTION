@@ -1,0 +1,12 @@
+Package: Rmatch
+Version: 0.0.0.9000
+Title: A General Package For Any Matching Tasks
+Description: ...
+Authors@R: person(given = "Matthias",
+       family = "Uckert",
+       role = c("aut", "cre"),
+       email = "Matthias.Uckert@Outlook.com")
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
