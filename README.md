@@ -13,7 +13,7 @@ The goal of Rmatch is to …
 You can install the development version of Rmatch like so:
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+# devtools::install_github("https://github.com/MatthiasUckert/Rmatch)
 ```
 
 ## Example
