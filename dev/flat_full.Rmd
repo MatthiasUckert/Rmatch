@@ -9,7 +9,7 @@ editor_options:
 <!-- Store every call to library() that you need to explore your functions -->
 
 ```{r development, include=FALSE}
-library(testthat)
+library(testthat); library(tidyverse); library(stringi)
 ```
 
 <!--
@@ -18,163 +18,665 @@ library(testthat)
 If it is the first time you use {fusen}, after 'description', you can directly run the last chunk of the present file with inflate() inside.
 --> 
 
-# Include some data examples in your package
-
-<!-- 
- Store your dataset in a directory named "inst/" at the root of your project.
- Use it for your tests in this Rmd thanks to `pkgload::load_all()` to make it available
-and `system.file()` to read it in your examples.
--->
-
 ```{r development-2}
-# Run all this chunk in the console directly
-# Create "inst/" directory
-dir.create(here::here("inst"))
-
-# Example dataset
-file.copy(system.file("nyc_squirrels_sample.csv", package = "fusen"), here::here("inst"))
-# Make your dataset file available to the current Rmd
 pkgload::load_all(path = here::here(), export_all = FALSE)
+```
 
-# You will be able to read your example data file in each of your function examples and tests as follows
-datafile <- system.file("nyc_squirrels_sample.csv", package = "Rmatch")
-nyc_squirrels <- read.csv(datafile)
+# Datasets
+```{r function-source, filename = "datasets"}
+#' Example Dataset: Source
+#'
+#'
+#' @format A data frame with 2,426 rows and 5 variables:
+#' \describe{
+#'   \item{id}{A unique identifier}
+#'   \item{name}{Company name}
+#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
+#'   \item{city}{City Name}
+#'   \item{address}{Address Name}
+#' }
+"source"
+```
 
-nyc_squirrels
+```{r function-target, filename = "datasets"}
+#' Example Dataset: Target
+#'
+#'
+#' @format A data frame with 4,671 rows and 5 variables:
+#' \describe{
+#'   \item{id}{A unique identifier}
+#'   \item{name}{Company name}
+#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
+#'   \item{city}{City Name}
+#'   \item{address}{Address Name}
+#' }
+"target"
+```
+
+```{r function-matches, filename = "datasets"}
+#' Example Dataset: Matches
+#'
+#'
+#' @format A data frame with 2,426 rows and 11 variables:
+#' \describe{
+#'   \item{id_s}{Source Dataframe: A unique identifier}
+#'   \item{id_t}{Traget Dataframe: A unique identifier}
+#'   \item{name_s}{Source Dataframe: Company name}
+#'   \item{name_t}{Traget Dataframe: Company name}
+#'   \item{iso3_s}{Source Dataframe: ISO 3166-1 alpha-3 country codes}
+#'   \item{iso3_t}{Traget Dataframe: ISO 3166-1 alpha-3 country codes}
+#'   \item{city_s}{Source Dataframe: City Name}
+#'   \item{city_t}{Source Dataframe: City Name}
+#'   \item{address_s}{Source Dataframe: Address Name}
+#'   \item{address_t}{Traget Dataframe: Address Name}
+#'   \item{match}{Indicator for matched names (always 1)}
+#' }
+"matches"
+```
+
+```{r function-legal_form_gleif, filename = "datasets"}
+#' Dataset: Legal Forms from the GLEIF
+#'
+#'
+#' @format A data frame with 3,322 rows and 3 variables:
+#' \describe{
+#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
+#'   \item{legal_form_orig}{Original legal form}
+#'   \item{legal_form_stand}{Standardized legal form}
+#' }
+"legal_form_gleif"
+```
+
+```{r function-legal_form_ecb, filename = "datasets"}
+#' Dataset: Legal Forms from the ECB
+#'
+#'
+#' @format A data frame with 2,399 rows and 3 variables:
+#' \describe{
+#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
+#'   \item{legal_form_orig}{Original legal form}
+#'   \item{legal_form_stand}{Standardized legal form}
+#' }
+"legal_form_ecb"
+```
+
+```{r function-legal_form_all, filename = "datasets"}
+#' Dataset: Combined Legal Forms from the GLEIF and ECB
+#'
+#'
+#' @format A data frame with 4,933 rows and 3 variables:
+#' \describe{
+#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
+#'   \item{legal_form_orig}{Original legal form}
+#'   \item{legal_form_stand}{Standardized legal form}
+#' }
+"legal_form_all"
 ```
 
 
-# The first function of the package: Calculate the median of a vector
 
-<!--
-Create a chunk for the core of the function
+# Functions
+## standardize_str
+```{r dev-standardize_str}
+.str <- "International Business Corporation"
+.op = c("space", "punct", "case", "utf8")
+```
 
-- The chunk needs to be named `function` at least
-- It contains the code of a documented function
-- The chunk can also be named `function-my_median` to make it easily
-findable in your Rmd
-- Let the `@examples` part empty, and use the next `examples` chunk instead
 
-After inflating the template
 
--  This function code will be added in a new file in the "R/" directory
--->
-
-```{r function}
-#' My median
+```{r function-standardize_str}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .str A string
+#' @param .op Operations to perform
 #'
-#' @param x Vector of Numeric values
-#' @inheritParams stats::median
-#'
-#' @return
-#' Median of vector x
+#' @return A string
+#' 
 #' @export
-#'
-#' @examples
-my_median <- function(x, na.rm = TRUE) {
-  if (!is.numeric(x)) {stop("x should be numeric")}
-  stats::median(x, na.rm = na.rm)
+standardize_str <- function(.str, .op = c("space", "punct", "case", "utf8")) {
+  str_ <- .str
+  
+  if ("punct" %in% .op) {
+    str_ <- trimws(stringi::stri_replace_all_regex(str_, "\\W", " "))
+    str_ <- trimws(stringi::stri_replace_all_regex(str_, "[[:punct:]]", " "))
+    
+    if (!"space" %in% .op) {
+      str_ <- trimws(stringi::stri_replace_all_regex(str_, "([[:blank:]]|[[:space:]])+", " "))
+    }
+  }
+  
+  if ("space" %in% .op) {
+    str_ <- trimws(stringi::stri_replace_all_regex(str_, "([[:blank:]]|[[:space:]])+", " "))
+  }
+  
+  if ("case" %in% .op) {
+    str_ <- toupper(str_)
+  }
+  
+  if ("utf8" %in% .op) {
+    str_ <- stringi::stri_enc_toutf8(str_)
+  }
+  
+  return(str_)
+  
 }
 ```
+  
+```{r example-standardize_str, eval=FALSE}
+standardize_str(c("jkldsa   jkdhas   äää  §$ ## #'''"))
+```
+  
+```{r tests-standardize_str}
+test_that("standardize_str works", {
+  expect_true(inherits(standardize_str, "function")) 
+})
+```
+  
 
-<!--
-Create a chunk with an example of use for your function
-
-- The chunk needs to be named `examples` at least
-- It contains working examples of your function
-- The chunk is better be named `examples-my_median` to be handled
-correctly when inflated as a vignette
-
-After inflating the template
-
--  This example will be added in the '@examples' part of our function above in the "R/" directory
-- This example will be added in the vignette created from this Rmd template
--->
-
-```{r examples}
-my_median(1:12)
+## standardize_data
+    
+```{r function-standardize_data}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .data A dataframe
+#' @param .cols Columns to standardize
+#' @param .op Operations to perform
+#'
+#' @return A dataframe
+#' 
+#' @export
+standardize_data <- function(.data, .cols, .op = c("space", "punct", "case", "utf8")) {
+    
+  tab_ <- .data
+  for (i in .cols) {
+    tab_[[i]] <- standardize_str(tab_[[i]])
+  }
+  
+  return(tab_)
+  
+}
+```
+  
+```{r example-standardize_data, eval=FALSE}
+standardize_data(source, c("name", "iso3", "city", "address"))
+```
+  
+```{r tests-standardize_data}
+test_that("standardize_data works", {
+  expect_true(inherits(standardize_data, "function")) 
+})
+```
+  
+## extract_legal_form
+```{r dev-extract_legal_form}
+.data <- source
+.col <- "name"
+.legal_forms <- tibble(.rows = 0)
+.workers = future::availableCores()
 ```
 
-<!--
-Create a chunk with a test of use for your function
 
-- The chunk needs to be named `tests` at least
-- It contains working tests of your function
-- The chunk is better be named `tests-my_median` to be handled
-correctly when inflated as a vignette
 
-After inflating the template
+```{r function-extract_legal_form}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .data A dataframe
+#' @param .col The column with firm names
+#' @param .legal_forms A dataframe with legal forms
+#' @param .workers NUmber of workers for parallelisation
+#'
+#' @return A dataframe
+#' 
+#' @importFrom rlang :=
+#' 
+#' @export
+extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
+  tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
+  
+  if (nrow(.legal_forms) == 0) {
+    tab_lf_ <- legal_form_all
+  } else {
+    tab_lf_ <- .legal_forms
+  }
 
--  This test code will be added in the "tests/testthat/" directory
--->
+  tab_ <- standardize_data(.data, .col)
+  lf_ <- unique(tab_lf_[["legal_form_orig"]])
+  nm_ <- tab_[[.col]]
 
-```{r tests}
-test_that("my_median works properly and show error if needed", {
-  expect_true(my_median(1:12) == 6.5)
-  expect_error(my_median("text"))
+  f_ <- carrier::crate(function(.lf, .nm) which(endsWith(.nm, paste0(" ", .lf))))
+  future::plan("multisession", workers = 6)
+  lf_ext_ <- furrr::future_map(
+    .x = purrr::set_names(lf_, lf_),
+    .f = ~ f_(.x, nm_),
+    .options = furrr::furrr_options(seed = TRUE)
+  )
+  future::plan("default")
+  lf_ext_ <- lf_ext_ %>%
+    purrr::compact() %>%
+    tibble::enframe(name = "legal_form_orig", value = "tmp") %>%
+    tidyr::unnest(tmp) %>%
+    dplyr::arrange(dplyr::desc(nchar(legal_form_orig))) %>%
+    dplyr::distinct(tmp, .keep_all = TRUE)
+
+  tab_ %>%
+    dplyr::mutate(tmp = dplyr::row_number()) %>%
+    dplyr::left_join(lf_ext_, by = "tmp") %>%
+    dplyr::left_join(tab_lf_, by = c("iso3", "legal_form_orig")) %>%
+    dplyr::rename(legal_form = legal_form_stand) %>%
+    dplyr::relocate(legal_form, .after = !!dplyr::sym(.col)) %>%
+    dplyr::mutate(
+      !!dplyr::sym(paste0(.col, "_adj")) := trimws(
+        stringi::stri_replace_last_fixed(name, legal_form_orig, "")
+        ),
+      .after = !!dplyr::sym(.col)
+    ) %>%
+    dplyr::select(-legal_form_orig, -tmp)
+  
+  
+}
+```
+  
+```{r example-extract_legal_form, eval=FALSE}
+extract_legal_form(source, "name")
+```
+  
+```{r tests-extract_legal_form}
+test_that("extract_legal_form works", {
+  expect_true(inherits(extract_legal_form, "function")) 
 })
 ```
 
-# Calculate the mean of a vector
+## match_col
 
-<!--
-There can be other functions, examples and tests in your flat template.
-Each of them will be inflated in a different file, provided that there is a level-1 or level-2 section title to separate from previous functions.
--->
+```{r dev-match_col}
+.s <- source[1:100, ]
+.t <- target[1:1000, ]
+.col <- "name"
+.method = "osa"
+.max_match = 10
+.min_sim = 0
+```
 
-## Use sub-functions in the same chunk
-
-```{r function-my_other_median}
-#' My Other median
+```{r function-match_col}
+#' Match a on a single column
+#' 
+#' Description
+#' 
+#' @param .s 
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .t 
+#' The Traget Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .col 
+#' The column name to match as a string
+#' @param .max_match 
+#' Maximum number of matches to return (Default = 10)
+#' @param .min_sim 
+#' Minimum Similarity as defined by the chosen method
+#' @param .method 
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' See stringdist package
 #'
-#' @param x Vector of Numeric values
-#' @inheritParams stats::median
+#' @return A Dataframe
+match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
+  V1 <- value <- id <- name <- id_t <- sim <- NULL
+  
+  
+  method_ <- match.arg(
+    arg = .method,
+    choices = c(
+      "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine",
+      "jaccard", "jw", "soundex"
+    )
+  )
+  tab_ <- stringdist::stringsimmatrix(
+    a = .s[[.col]],
+    b = .t[[.col]],
+    method = method_
+  ) %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(id = dplyr::row_number(), .before = V1) %>%
+    tidyr::pivot_longer(!dplyr::matches("id")) %>%
+    dplyr::filter(value >= .min_sim) %>%
+    dplyr::group_by(id) %>%
+    dplyr::slice_max(order_by = value, n = .max_match) %>%
+    dplyr::ungroup() %>%
+    dplyr::rename(id_s = id, id_t = name, sim = value) %>%
+    dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
+    suppressWarnings()
+  tab_[["id_s"]] <- .s[["id"]][tab_[["id_s"]]]
+  tab_[["id_t"]] <- .t[["id"]][tab_[["id_t"]]]
+  tab_
+}
+```
+  
+  
+```{r tests-match_col}
+test_that("match_col works", {
+  expect_true(inherits(match_col, "function")) 
+})
+```  
+
+## match_data
+```{r dev-match_data}
+.s <- source[1:1000, ]
+.t <- target[1:1000, ]
+.col <- c("name", "iso3", "city", "address")
+.method = "osa"
+.max_match = 10
+.min_sim = 0
+```
+    
+```{r function-match_data}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .s 
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .t 
+#' The Traget Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .cols 
+#' The column names to match as character vector
+#' @param .max_match 
+#' Maximum number of matches to return (Default = 10)
+#' @param .min_sim 
+#' Minimum Similarity as defined by the chosen method
+#' @param .method 
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' See stringdist package
 #'
-#' @return
-#' Median of vector x
+#' @return A Dataframe
+#' 
 #' @export
-#'
-#' @examples
-my_other_median <- function(x, na.rm = TRUE) {
-  if (!is.numeric(x)) {stop("x should be numeric")}
-  sub_median(x, na.rm =na.rm)
-}
+match_data <- function(.s, .t, .cols, .max_match = 10, .min_sim = .8, .method = "osa") {
+  sim <- NULL
 
-#' Core of the median not exported
-#' @param x Vector of Numeric values
-#' @inheritParams stats::median
-sub_median <- function(x, na.rm = TRUE) {
-  stats::median(x, na.rm)
+  tab_ <- match_col(.s, .t, .cols[1], .max_match, .min_sim, .method)
+  
+  if (length(.cols) > 1) {
+    tab_ <- dplyr::rename(tab_, sim1 = sim)
+    s_ <- dplyr::left_join(tab_, .s, by = c("id_s" = "id"))
+    t_ <- dplyr::left_join(tab_, .t, by = c("id_t" = "id"))
+    
+    for (i in 2:length(.cols)) {
+      a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+      
+      tab_[[paste0("sim", i)]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+    }
+    
+  }
+  
+  return(tab_)
+
 }
 ```
-
-```{r examples-my_other_median}
-my_other_median(1:12)
+  
+```{r example-match_data, eval=FALSE}
+library(Rmatch)
+match_data(source[1:100, ], target[1:1000, ], c("name", "city"), .min_sim = 0)
 ```
 
-```{r tests-my_other_median}
-test_that("my_median works properly and show error if needed", {
-  expect_true(my_other_median(1:12) == 6.5)
-  expect_error(my_other_median("text"))
+```{r tests-match_data}
+test_that("match_data works", {
+  expect_true(inherits(match_data, "function")) 
 })
 ```
 
-<!--
-# There can be development actions
+## uniqueness_vec
+```{r dev-uniqueness_vec}
+.vec <- source[["name"]][1:10]
+```
 
-Create a chunk with 'development' actions
 
-- The chunk needs to be named `development` or `dev`
-- It contains functions that are used for package development only
-- Note that you may want to store most of these functions in the 0-dev_history.Rmd file
+```{r function-uniqueness_vec}
+#' Uniquness/Rarity of a vector 
+#' 
+#' Description
+#' 
+#' @param .vec A character vector
+#'
+#' @return A numeric vector
+#' 
+#' @noRd
+uniqueness_vec <- function(.vec) {
+  l1_ <- stringi::stri_split_fixed(.vec, " ")
+  v1_ <- unlist(l1_)
+  v2_ <- as.integer(stats::ave(v1_, v1_, FUN = length))
+  l2_ <- utils::relist(v2_, l1_)
+  v3_ <- purrr::map_int(l2_, ~ sum(.x, na.rm = TRUE))
+  
+  1 - (v3_ / max(v3_))
+}
+```
+  
+```{r example-uniqueness_vec, eval=FALSE}
+uniqueness_vec(source[["name"]][1:10])
+```
+  
+```{r tests-uniqueness_vec}
+test_that("uniqueness_vec works", {
+  expect_true(inherits(uniqueness_vec, "function")) 
+})
+```
+  
+## uniqueness_data
 
-These are only included in the present flat template file, their content will not be part of the package anywhere else.
--->
+```{r dev-uniqueness_data}
+.data <- source
+.cols <- c("name", "iso3", "city", "address")
+.type <- "source"
+```
+
+
+```{r function-uniqueness_data}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .data A Dataframe
+#' @param .cols Column as character vector
+#' @param .type either source or target
+#'
+#' @return A dataframe
+#' 
+#' @export
+uniqueness_data <- function(.data, .cols, .type = c("source", "target")) {
+  id <- NULL
+  type_ <- match.arg(.type, c("source", "target"))
+  type_ <- substr(type_, 1, 1)
+  tab_ <- .data
+
+  for (i in seq_len(length(.cols))) {
+    tab_[[paste0("uni_", type_, i)]] <- uniqueness_vec(tab_[[.cols[i]]])
+  }
+  
+  tab_ <- dplyr::select(tab_, id, dplyr::starts_with("uni_"))
+  
+  if (.type == "source") {
+    dplyr::rename(tab_, id_s = id)
+  } else {
+    dplyr::rename(tab_, id_t = id)
+  }
+  
+}
+```
+  
+```{r example-uniqueness_data, eval=FALSE}
+uniqueness_data(source, c("name", "iso3", "city", "address"), "source")
+```
+  
+```{r tests-uniqueness_data}
+test_that("uniqueness_data works", {
+  expect_true(inherits(uniqueness_data, "function")) 
+})
+```
+  
+  
+## scores_data
+```{r dev-scores_data}
+.data <- tab_match
+.cols_exact <- "sim2"
+```
+
+```{r function-scores_data}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .data A dataframe
+#' @param .cols_extact Columns that need extact matching
+#'
+#' @return A dataframe
+#' 
+#' @export
+scores_data <- function(.data, .cols_extact = c()) {
+  id_s <- id_t <- NULL
+  tab0_ <- tab1_ <- .data
+  cols_ <- colnames(.data)
+  sim_  <- cols_[startsWith(cols_, "sim")]
+  uni_  <- cols_[startsWith(cols_, "uni")]
+  all_  <- c(sim_, uni_)
+  
+  
+  if (length(.cols_exact) > 0) {
+    for (i in .cols_exact) {
+      tab1_[[i]][tab1_[[i]] != 1] <- -1000
+    }
+  }
+  
+  .data %>%
+    dplyr::select(id_s, id_t) %>%
+    dplyr::mutate(
+      mean_sim0 = rowMeans(as.matrix(tab0_[, sim_]), na.rm = TRUE),
+      mean_all0 = rowMeans(as.matrix(tab0_[, all_]), na.rm = TRUE),
+      mean_sim1 = rowMeans(as.matrix(tab1_[, sim_]), na.rm = TRUE),
+      mean_all1 = rowMeans(as.matrix(tab1_[, all_]), na.rm = TRUE)
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(dplyr::starts_with("mean"), ~ dplyr::if_else(. < 0, -1, .))
+    )
+  
+}
+```
+  
+```{r tests-scores_data}
+test_that("scores_data works", {
+  expect_true(inherits(scores_data, "function")) 
+})
+```
+   
+
+# Workflow
+## Defining Variables
+```{r}
+tab_source0 <- source
+tab_target0 <- target
+tab_matches <- matches
+```
+
+```{r}
+tab_source1 <- extract_legal_form(tab_source0, "name")
+tab_target1 <- extract_legal_form(tab_target0, "name")
+```
+
+
+```{r}
+cols <- c("name", "iso3", "city", "address")
+tab_match1 <- match_data(tab_source0, tab_target0, cols, 5, .2, "osa")
+tab_match2 <- match_data(tab_source0, tab_target0, cols, 10, .2, "osa")
+
+cols <- c("name", "iso3")
+tab_match3 <- match_data(tab_source0, tab_target0, cols, 5, .2, "osa")
+tab_match4 <- match_data(tab_source0, tab_target0, cols, 10, .2, "osa")
+
+cols <- c("name_adj", "legal_form", "iso3", "city", "address")
+tab_match5 <- match_data(tab_source1, tab_target1, cols, 5, .2, "osa")
+tab_match6 <- match_data(tab_source1, tab_target1, cols, 10, .2, "osa")
+
+cols <- c("name_adj", "legal_form", "iso3")
+tab_match7 <- match_data(tab_source1, tab_target1, cols, 5, .2, "osa")
+tab_match8 <- match_data(tab_source1, tab_target1, cols, 10, .2, "osa")
+```
+
+```{r}
+tab_score1 <- scores_data(tab_match1, "sim2")
+tab_score2 <- scores_data(tab_match2, "sim2")
+
+tab_score3 <- scores_data(tab_match3, "sim2")
+tab_score4 <- scores_data(tab_match4, "sim2")
+
+tab_score5 <- scores_data(tab_match5, "sim3")
+tab_score6 <- scores_data(tab_match6, "sim3")
+
+tab_score7 <- scores_data(tab_match7, "sim3")
+tab_score8 <- scores_data(tab_match8, "sim3")
+```
+
+```{r}
+get_accuracy <- function(.score, .matches) {
+  .score %>%
+    select(id_s, id_t, starts_with("mean_sim")) %>%
+    pivot_longer(starts_with("mean_sim")) %>%
+    arrange(name, desc(value)) %>%
+    filter(!duplicated(paste0(name, id_t))) %>%
+    distinct(id_s, name, .keep_all = TRUE) %>%
+    filter(value > 0) %>%
+    inner_join(.matches, by = c("id_s", "id_t")) %>%
+    group_by(name) %>%
+    summarise(
+      p = n() / nrow(.matches)
+    )
+}
+
+tab1 <- tab_source0 %>%
+  inner_join(tab_target0, by = c("name", "iso3")) %>%
+  distinct(id.x, .keep_all = TRUE) %>%
+  distinct(id.y, .keep_all = TRUE) %>%
+  summarise(
+   p = n() / nrow(tab_matches)
+  ) %>% mutate(type = "No LF - Benchmark")
+
+tab2 <- tab_source1 %>%
+  inner_join(tab_target1, by = c("name_adj", "legal_form", "iso3")) %>%
+  distinct(id.x, .keep_all = TRUE) %>%
+  distinct(id.y, .keep_all = TRUE) %>%
+  summarise(
+   p = n() / nrow(tab_matches)
+  ) %>% mutate(type = "LF - Benchmark")
+
+bind_rows(
+  mutate(get_accuracy(tab_score1, tab_matches), type = "No LF - 5 Matches - Cols: All"),
+  mutate(get_accuracy(tab_score2, tab_matches), type = "No LF - 10 Matches - Cols: All"),
+  
+  mutate(get_accuracy(tab_score3, tab_matches), type = "No LF - 5 Matches - Cols: name, iso3"),
+  mutate(get_accuracy(tab_score4, tab_matches), type = "No LF - 10 Matches - Cols: name, iso3"),
+  
+  mutate(get_accuracy(tab_score5, tab_matches), type = "LF - 5 Matches - Cols: All"),
+  mutate(get_accuracy(tab_score6, tab_matches), type = "LF - 10 Matches - Cols: All"),
+  
+  mutate(get_accuracy(tab_score7, tab_matches), type = "LF - 5 Matches - Cols: name_adj, legal_form, iso3"),
+  mutate(get_accuracy(tab_score8, tab_matches), type = "LF - 10 Matches - Cols: name_adj, legal_form, iso3"),
+  tab1,
+  tab2
+) %>%
+  select(type, everything()) %>%
+  pivot_wider(names_from = name, values_from = p)
+```
+
+
 
 ```{r development-inflate, eval=FALSE}
-# Keep eval=FALSE to avoid infinite loop in case you hit the knit button
-# Execute in the console directly
-fusen::inflate(flat_file = "dev/flat_full.Rmd", vignette_name = "Get started")
+fusen::inflate(flat_file = "dev/flat_full.Rmd", vignette_name = "Get-Started", overwrite = TRUE)
 ```
 
 
