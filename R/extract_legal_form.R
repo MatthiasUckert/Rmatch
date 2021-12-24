@@ -20,7 +20,7 @@ extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .worker
   tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
   
   if (nrow(.legal_forms) == 0) {
-    tab_lf_ <- legal_form_all
+    tab_lf_ <- get("legal_form_all")
   } else {
     tab_lf_ <- .legal_forms
   }

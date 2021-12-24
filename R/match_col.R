@@ -45,10 +45,11 @@ match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "o
     dplyr::group_by(id) %>%
     dplyr::slice_max(order_by = value, n = .max_match) %>%
     dplyr::ungroup() %>%
-    dplyr::rename(id_s = id, id_t = name, sim = value) %>%
+    dplyr::rename(id_s = id, id_t = name) %>%
     dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
     suppressWarnings()
   tab_[["id_s"]] <- .s[["id"]][tab_[["id_s"]]]
   tab_[["id_t"]] <- .t[["id"]][tab_[["id_t"]]]
-  tab_
+  colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .col))
+  return(tab_)
 }

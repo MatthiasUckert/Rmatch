@@ -1,0 +1,81 @@
+---
+title: "Get Started"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r development, include=FALSE}
+library(testthat); library(tidyverse); library(kableExtra); library(scales)
+```
+
+```{r development-1, include=FALSE}
+pkgload::load_all(export_all = FALSE)
+```
+
+
+# Check Memory Requirements
+```{r include=FALSE}
+make_facke_data <- function(.n, .cols) {
+  s_ <- t_ <- tibble::tibble(id = as.character(seq_len(.n)))
+  for (i in .cols) {
+    s_[[i]] <- purrr::map_chr(paste(seq_len(.n), 1), ~ digest::digest(.x, "xxhash32"))
+    t_[[i]] <- purrr::map_chr(paste(seq_len(.n), 2), ~ digest::digest(.x, "xxhash32"))
+  }
+  return(list(s = s_, t = t_))
+}
+```
+
+
+
+```{r include=FALSE}
+options(scipen = 999)
+cols <- c("name", "city")
+n10 <- make_facke_data(10, cols)
+n100 <- make_facke_data(100, cols)
+n1000 <- make_facke_data(1000, cols)
+n10000 <- make_facke_data(10000, cols)
+
+.tmp <- bench::mark(
+  n10 = match_data(n10$s, n10$t, cols),
+  n100 = match_data(n100$s, n100$t, cols),
+  n1000 = match_data(n1000$s, n1000$t, cols),
+  # n10000 = match_data(n10000$s, n10000$t, cols),
+  check = FALSE
+) %>% dplyr::select(expression:mem_alloc) 
+
+benchmark <- .tmp %>%
+  dplyr::rename(size_mat = expression, mem_calc = mem_alloc) %>%
+  dplyr::mutate(
+    dplyr::across(c(min, median), as.numeric),
+    tmp = as.integer(gsub("n", "", size_mat)),
+    dim_mat = paste(comma(tmp), "x", comma(tmp)),
+    size_mat = tmp ^ 2,
+    mem_calc = as.numeric(mem_calc) / 1e6,
+    mem_mat = size_mat * 8 / 1e6,
+    `calc/mat` = as.numeric(mem_calc / mem_mat)
+  ) %>%
+  dplyr::mutate(
+    fac_sze = size_mat / lag(size_mat),
+    fac_mem = mem_calc / lag(mem_calc),
+    fac_time = median / lag(median),
+    dplyr::across(!dplyr::matches("_mat$"), ~ round(., 2))
+    ) %>%
+  dplyr::select(dim_mat, dplyr::everything(), -min, -`itr/sec`, -tmp)
+```
+
+
+```{r echo=FALSE}
+benchmark %>%
+  kableExtra::kbl(align = "c", format.args = list(big.mark = ",")) %>%
+  kableExtra::kable_paper()
+  
+```
+
+
+```{r development-inflate, eval=FALSE, echo=FALSE}
+# Run but keep eval=FALSE to avoid infinite loop
+# Execute in the console directly
+fusen::inflate(flat_file = "dev/flat_vignette.Rmd", vignette_name = NA)
+```
+

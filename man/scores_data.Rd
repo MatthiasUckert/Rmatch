@@ -2,14 +2,12 @@
 % Please edit documentation in R/scores_data.R
 \name{scores_data}
 \alias{scores_data}
-\title{Title}
+\title{Score Data}
 \usage{
-scores_data(.data, .cols_extact = c())
+scores_data(.data)
 }
 \arguments{
 \item{.data}{A dataframe}
-
-\item{.cols_extact}{Columns that need extact matching}
 }
 \value{
 A dataframe

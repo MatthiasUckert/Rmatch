@@ -9,7 +9,7 @@ editor_options:
 <!-- Store every call to library() that you need to explore your functions -->
 
 ```{r development, include=FALSE}
-library(testthat); library(tidyverse); library(stringi)
+library(testthat); library(tidyverse); library(stringi); library(fst)
 ```
 
 <!--
@@ -116,6 +116,7 @@ pkgload::load_all(path = here::here(), export_all = FALSE)
 
 
 # Functions
+
 ## standardize_str
 ```{r dev-standardize_str}
 .str <- "International Business Corporation"
@@ -240,7 +241,7 @@ extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .worker
   tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
   
   if (nrow(.legal_forms) == 0) {
-    tab_lf_ <- legal_form_all
+    tab_lf_ <- get("legal_form_all")
   } else {
     tab_lf_ <- .legal_forms
   }
@@ -348,12 +349,13 @@ match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "o
     dplyr::group_by(id) %>%
     dplyr::slice_max(order_by = value, n = .max_match) %>%
     dplyr::ungroup() %>%
-    dplyr::rename(id_s = id, id_t = name, sim = value) %>%
+    dplyr::rename(id_s = id, id_t = name) %>%
     dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
     suppressWarnings()
   tab_[["id_s"]] <- .s[["id"]][tab_[["id_s"]]]
   tab_[["id_t"]] <- .t[["id"]][tab_[["id_t"]]]
-  tab_
+  colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .col))
+  return(tab_)
 }
 ```
   
@@ -366,12 +368,15 @@ test_that("match_col works", {
 
 ## match_data
 ```{r dev-match_data}
-.s <- source[1:1000, ]
+.s <- source[1:100, ]
 .t <- target[1:1000, ]
-.col <- c("name", "iso3", "city", "address")
+.cols <- c("name", "iso3", "city", "address")
 .method = "osa"
 .max_match = 10
 .min_sim = 0
+.chunk <- 20
+.progress = TRUE
+.must_match <- c("iso3")
 ```
     
 ```{r function-match_data}
@@ -393,37 +398,59 @@ test_that("match_col works", {
 #' Minimum Similarity as defined by the chosen method
 #' @param .method 
 #' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' @param .must_match Columns that must be matched perfectly
+#' @param .progress Should a progress bar be shown?
 #' See stringdist package
-#'
 #' @return A Dataframe
 #' 
 #' @export
-match_data <- function(.s, .t, .cols, .max_match = 10, .min_sim = .8, .method = "osa") {
+match_data <- function(.s, .t, .cols, .must_match = NULL, .max_match = 10, 
+                       .min_sim = .8, .method = "osa", .progress = TRUE) {
+  
   sim <- NULL
-
-  tab_ <- match_col(.s, .t, .cols[1], .max_match, .min_sim, .method)
   
-  if (length(.cols) > 1) {
-    tab_ <- dplyr::rename(tab_, sim1 = sim)
-    s_ <- dplyr::left_join(tab_, .s, by = c("id_s" = "id"))
-    t_ <- dplyr::left_join(tab_, .t, by = c("id_t" = "id"))
+  if (!is.null(.must_match)) {
+    vs_ <- tidyr::unite(.s[, .must_match], "tmp", dplyr::everything())[["tmp"]]
+    ls_ <- split(.s, vs_)
     
-    for (i in 2:length(.cols)) {
-      a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-      
-      tab_[[paste0("sim", i)]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-    }
+    vt_ <- tidyr::unite(.t[, .must_match], "tmp", dplyr::everything())[["tmp"]]
+    lt_ <- split(.t, vt_)
     
+    lt_ <- lt_[names(lt_) %in% names(ls_)]
+    ls_ <- ls_[names(lt_)]
+  } else {
+    ls_ <- list(.s)
+    lt_ <- list(.t)
   }
-  
-  return(tab_)
 
+  if (.progress) pb <- progress::progress_bar$new(total = length(ls_))
+  purrr::map2_dfr(
+    .x = ls_,
+    .y = lt_,
+    .f = ~ {
+      if (.progress) pb$tick()
+      tab_ <- match_col(.x, .y, .cols[1], .max_match, .min_sim, .method)
+
+      if (length(.cols) > 1) {
+        s_ <- dplyr::left_join(tab_, .x, by = c("id_s" = "id"))
+        t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
+
+        for (i in 2:length(.cols)) {
+          a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+
+          tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+        }
+      }
+      gc()
+      return(tab_)
+    }
+  )
 }
 ```
   
 ```{r example-match_data, eval=FALSE}
 library(Rmatch)
-match_data(source[1:100, ], target[1:1000, ], c("name", "city"), .min_sim = 0)
+match_data(source, target, c("name", "iso3", "city"), .min_sim = 0, .must_match = "iso3")
 ```
 
 ```{r tests-match_data}
@@ -525,45 +552,28 @@ test_that("uniqueness_data works", {
 ## scores_data
 ```{r dev-scores_data}
 .data <- tab_match
-.cols_exact <- "sim2"
 ```
 
 ```{r function-scores_data}
-#' Title
+#' Score Data
 #' 
 #' Description
 #' 
 #' @param .data A dataframe
-#' @param .cols_extact Columns that need extact matching
 #'
 #' @return A dataframe
 #' 
 #' @export
-scores_data <- function(.data, .cols_extact = c()) {
+scores_data <- function(.data) {
   id_s <- id_t <- NULL
-  tab0_ <- tab1_ <- .data
-  cols_ <- colnames(.data)
-  sim_  <- cols_[startsWith(cols_, "sim")]
-  uni_  <- cols_[startsWith(cols_, "uni")]
-  all_  <- c(sim_, uni_)
+  tab_ <- .data
+  cols_ <- colnames(tab_)
+  cols_ <- cols_[grepl("^sim_|^uni_", cols_)]
   
-  
-  if (length(.cols_exact) > 0) {
-    for (i in .cols_exact) {
-      tab1_[[i]][tab1_[[i]] != 1] <- -1000
-    }
-  }
-  
-  .data %>%
+  tab_ %>%
     dplyr::select(id_s, id_t) %>%
     dplyr::mutate(
-      mean_sim0 = rowMeans(as.matrix(tab0_[, sim_]), na.rm = TRUE),
-      mean_all0 = rowMeans(as.matrix(tab0_[, all_]), na.rm = TRUE),
-      mean_sim1 = rowMeans(as.matrix(tab1_[, sim_]), na.rm = TRUE),
-      mean_all1 = rowMeans(as.matrix(tab1_[, all_]), na.rm = TRUE)
-    ) %>%
-    dplyr::mutate(
-      dplyr::across(dplyr::starts_with("mean"), ~ dplyr::if_else(. < 0, -1, .))
+      score_mean = rowMeans(as.matrix(tab_[, cols_]), na.rm = TRUE)
     )
   
 }
@@ -575,108 +585,76 @@ test_that("scores_data works", {
 })
 ```
    
-
-# Workflow
-## Defining Variables
-```{r}
-tab_source0 <- source
-tab_target0 <- target
-tab_matches <- matches
-```
-
-```{r}
-tab_source1 <- extract_legal_form(tab_source0, "name")
-tab_target1 <- extract_legal_form(tab_target0, "name")
+   
+## dedup_data
+```{r dev-dedup_data}
+.score <- tab_score
+.source <- source
+.target <- target
+.col <- "score_mean"
 ```
 
 
-```{r}
-cols <- c("name", "iso3", "city", "address")
-tab_match1 <- match_data(tab_source0, tab_target0, cols, 5, .2, "osa")
-tab_match2 <- match_data(tab_source0, tab_target0, cols, 10, .2, "osa")
 
-cols <- c("name", "iso3")
-tab_match3 <- match_data(tab_source0, tab_target0, cols, 5, .2, "osa")
-tab_match4 <- match_data(tab_source0, tab_target0, cols, 10, .2, "osa")
-
-cols <- c("name_adj", "legal_form", "iso3", "city", "address")
-tab_match5 <- match_data(tab_source1, tab_target1, cols, 5, .2, "osa")
-tab_match6 <- match_data(tab_source1, tab_target1, cols, 10, .2, "osa")
-
-cols <- c("name_adj", "legal_form", "iso3")
-tab_match7 <- match_data(tab_source1, tab_target1, cols, 5, .2, "osa")
-tab_match8 <- match_data(tab_source1, tab_target1, cols, 10, .2, "osa")
-```
-
-```{r}
-tab_score1 <- scores_data(tab_match1, "sim2")
-tab_score2 <- scores_data(tab_match2, "sim2")
-
-tab_score3 <- scores_data(tab_match3, "sim2")
-tab_score4 <- scores_data(tab_match4, "sim2")
-
-tab_score5 <- scores_data(tab_match5, "sim3")
-tab_score6 <- scores_data(tab_match6, "sim3")
-
-tab_score7 <- scores_data(tab_match7, "sim3")
-tab_score8 <- scores_data(tab_match8, "sim3")
-```
-
-```{r}
-get_accuracy <- function(.score, .matches) {
-  .score %>%
-    select(id_s, id_t, starts_with("mean_sim")) %>%
-    pivot_longer(starts_with("mean_sim")) %>%
-    arrange(name, desc(value)) %>%
-    filter(!duplicated(paste0(name, id_t))) %>%
-    distinct(id_s, name, .keep_all = TRUE) %>%
-    filter(value > 0) %>%
-    inner_join(.matches, by = c("id_s", "id_t")) %>%
-    group_by(name) %>%
-    summarise(
-      p = n() / nrow(.matches)
-    )
+```{r function-dedup_data}
+#' Deduplicate Data
+#' 
+#' Description
+#' 
+#' @param .score Dataframe generated by scores_data()
+#' @param .source 
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .target 
+#' The Traget Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .col score column generated by scores_data()
+#'
+#' @return A dataframe
+#' 
+#' @export
+dedup_data <- function(.score, .source, .target, .col) {
+  id_s <- id_t <- name_s <- name_t <- NULL
+  
+  col_s_ <- colnames(.source)
+  col_t_ <- colnames(.target)
+  col_e_ <- col_s_[col_s_ %in% col_t_]
+  col_e_ <- col_e_[!col_e_ == "id"]
+  col_e_ <- unlist(purrr::map2(paste0(col_e_, "_s"), paste0(col_e_, "_t"), c))
+  
+  tab_ <- .score %>%
+    dplyr::select(id_s, id_t, !!dplyr::sym(.col)) %>%
+    dplyr::arrange(dplyr::desc(!!dplyr::sym(.col))) %>%
+    dplyr::filter(!duplicated(id_t)) %>%
+    dplyr::distinct(id_s, .keep_all = TRUE) %>%
+    dplyr::full_join(.source, c("id_s" = "id"), FALSE, suffix = c("_s", "_t")) %>%
+    dplyr::left_join(.target, c("id_t" = "id"), FALSE, suffix = c("_s", "_t")) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(diff_name = list(diffmatchpatch::diff_make(name_s, name_t)))
+  
+  tab_ <- tab_[, c("id_s", "id_t", .col, col_e_)]
+  return(tab_)
 }
-
-tab1 <- tab_source0 %>%
-  inner_join(tab_target0, by = c("name", "iso3")) %>%
-  distinct(id.x, .keep_all = TRUE) %>%
-  distinct(id.y, .keep_all = TRUE) %>%
-  summarise(
-   p = n() / nrow(tab_matches)
-  ) %>% mutate(type = "No LF - Benchmark")
-
-tab2 <- tab_source1 %>%
-  inner_join(tab_target1, by = c("name_adj", "legal_form", "iso3")) %>%
-  distinct(id.x, .keep_all = TRUE) %>%
-  distinct(id.y, .keep_all = TRUE) %>%
-  summarise(
-   p = n() / nrow(tab_matches)
-  ) %>% mutate(type = "LF - Benchmark")
-
-bind_rows(
-  mutate(get_accuracy(tab_score1, tab_matches), type = "No LF - 5 Matches - Cols: All"),
-  mutate(get_accuracy(tab_score2, tab_matches), type = "No LF - 10 Matches - Cols: All"),
-  
-  mutate(get_accuracy(tab_score3, tab_matches), type = "No LF - 5 Matches - Cols: name, iso3"),
-  mutate(get_accuracy(tab_score4, tab_matches), type = "No LF - 10 Matches - Cols: name, iso3"),
-  
-  mutate(get_accuracy(tab_score5, tab_matches), type = "LF - 5 Matches - Cols: All"),
-  mutate(get_accuracy(tab_score6, tab_matches), type = "LF - 10 Matches - Cols: All"),
-  
-  mutate(get_accuracy(tab_score7, tab_matches), type = "LF - 5 Matches - Cols: name_adj, legal_form, iso3"),
-  mutate(get_accuracy(tab_score8, tab_matches), type = "LF - 10 Matches - Cols: name_adj, legal_form, iso3"),
-  tab1,
-  tab2
-) %>%
-  select(type, everything()) %>%
-  pivot_wider(names_from = name, values_from = p)
 ```
-
+  
+```{r example-dedup_data}
+# dedup_data()
+```
+  
+```{r tests-dedup_data}
+test_that("dedup_data works", {
+  expect_true(inherits(dedup_data, "function")) 
+})
+```
+  
+   
 
 
 ```{r development-inflate, eval=FALSE}
-fusen::inflate(flat_file = "dev/flat_full.Rmd", vignette_name = "Get-Started", overwrite = TRUE)
+fusen::inflate(
+  flat_file = "dev/flat_full.Rmd", 
+  vignette_name = NA, overwrite = "no"
+  )
 ```
 
 

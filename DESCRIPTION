@@ -9,12 +9,16 @@ Depends:
     R (>= 2.10)
 Imports: 
     carrier,
+    crayon,
+    diffmatchpatch,
     dplyr,
     furrr,
     future,
     magrittr,
+    progress,
     purrr,
     rlang,
+    scales,
     stats,
     stringdist,
     stringi,

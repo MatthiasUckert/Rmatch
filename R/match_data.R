@@ -18,32 +18,54 @@
 #' Minimum Similarity as defined by the chosen method
 #' @param .method 
 #' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' @param .must_match Columns that must be matched perfectly
+#' @param .progress Should a progress bar be shown?
 #' See stringdist package
-#'
 #' @return A Dataframe
 #' 
 #' @export
 #' @examples
 #' library(Rmatch)
-#' match_data(source[1:100, ], target[1:1000, ], c("name", "city"), .min_sim = 0)
-match_data <- function(.s, .t, .cols, .max_match = 10, .min_sim = .8, .method = "osa") {
+#' match_data(source, target, c("name", "iso3", "city"), .min_sim = 0, .must_match = "iso3")
+match_data <- function(.s, .t, .cols, .must_match = NULL, .max_match = 10, 
+                       .min_sim = .8, .method = "osa", .progress = TRUE) {
+  
   sim <- NULL
-
-  tab_ <- match_col(.s, .t, .cols[1], .max_match, .min_sim, .method)
   
-  if (length(.cols) > 1) {
-    tab_ <- dplyr::rename(tab_, sim1 = sim)
-    s_ <- dplyr::left_join(tab_, .s, by = c("id_s" = "id"))
-    t_ <- dplyr::left_join(tab_, .t, by = c("id_t" = "id"))
+  if (!is.null(.must_match)) {
+    vs_ <- tidyr::unite(.s[, .must_match], "tmp", dplyr::everything())[["tmp"]]
+    ls_ <- split(.s, vs_)
     
-    for (i in 2:length(.cols)) {
-      a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-      
-      tab_[[paste0("sim", i)]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-    }
+    vt_ <- tidyr::unite(.t[, .must_match], "tmp", dplyr::everything())[["tmp"]]
+    lt_ <- split(.t, vt_)
     
+    lt_ <- lt_[names(lt_) %in% names(ls_)]
+    ls_ <- ls_[names(lt_)]
+  } else {
+    ls_ <- list(.s)
+    lt_ <- list(.t)
   }
-  
-  return(tab_)
 
+  if (.progress) pb <- progress::progress_bar$new(total = length(ls_))
+  purrr::map2_dfr(
+    .x = ls_,
+    .y = lt_,
+    .f = ~ {
+      if (.progress) pb$tick()
+      tab_ <- match_col(.x, .y, .cols[1], .max_match, .min_sim, .method)
+
+      if (length(.cols) > 1) {
+        s_ <- dplyr::left_join(tab_, .x, by = c("id_s" = "id"))
+        t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
+
+        for (i in 2:length(.cols)) {
+          a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+
+          tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+        }
+      }
+      gc()
+      return(tab_)
+    }
+  )
 }

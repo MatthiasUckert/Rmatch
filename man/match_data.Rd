@@ -4,7 +4,16 @@
 \alias{match_data}
 \title{Title}
 \usage{
-match_data(.s, .t, .cols, .max_match = 10, .min_sim = 0.8, .method = "osa")
+match_data(
+  .s,
+  .t,
+  .cols,
+  .must_match = NULL,
+  .max_match = 10,
+  .min_sim = 0.8,
+  .method = "osa",
+  .progress = TRUE
+)
 }
 \arguments{
 \item{.s}{The Source Dataframe.
@@ -15,11 +24,15 @@ Must contain a unique column id and the columns you want to match on}
 
 \item{.cols}{The column names to match as character vector}
 
+\item{.must_match}{Columns that must be matched perfectly}
+
 \item{.max_match}{Maximum number of matches to return (Default = 10)}
 
 \item{.min_sim}{Minimum Similarity as defined by the chosen method}
 
-\item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+\item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"}
+
+\item{.progress}{Should a progress bar be shown?
 See stringdist package}
 }
 \value{
@@ -30,5 +43,5 @@ Description
 }
 \examples{
 library(Rmatch)
-match_data(source[1:100, ], target[1:1000, ], c("name", "city"), .min_sim = 0)
+match_data(source, target, c("name", "iso3", "city"), .min_sim = 0, .must_match = "iso3")
 }
