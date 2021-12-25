@@ -1,0 +1,228 @@
+---
+title: "flat_checks.Rmd"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r development, include=FALSE}
+library(testthat)
+```
+
+```{r development-1}
+# Load already included functions
+pkgload::load_all(export_all = FALSE)
+```
+
+## check_data
+```{r dev-check_data}
+.source <- tab_source
+.target <- tab_target
+```
+
+
+```{r function-check_data}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .source
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .target
+#' The Traget Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @return Messages
+#' 
+#' @export
+check_data <- function(.source, .target) {
+  cols_s_  <- colnames(.source)
+  cols_t_  <- colnames(.target)
+  cols_e_  <- cols_s_[cols_s_ %in% cols_t_]
+  cols_ns_ <- cols_s_[!cols_s_ %in% cols_t_]
+  cols_nt_ <- cols_t_[!cols_t_ %in% cols_s_]
+
+  p0 <- \(...) paste0(...)
+  le <- \(...) length(...)
+  p1 <- \(...) paste(..., collapse = ", ")
+  sc <- \(.x, .a = NULL) scales::comma(.x, accuracy = .a)
+  cl <- \(.c, .x) crayon::bold(ifelse(.c, crayon::green(.x), crayon::red(.x)))
+  bd <- \(...) crayon::bold(...)
+  ad <- \(.x) any(duplicated(.x))
+  sl <- \(.x, .l) sprintf(p0("%-", .l, "s"), .x)
+  
+  un <- \(.tab, .cols) {
+    tmp <- NULL
+    cols_ <- .cols[.cols != "id"]
+    char_ <- nchar(p1(cols_))
+    chr <- c()
+    tab0_ <- tibble::as_tibble(.tab) 
+
+    for (i in seq_len(le(cols_))) {
+      tab_ <- tab0_[, cols_[1:i]] %>%
+        tidyr::unite("tmp", dplyr::everything()) %>%
+        dplyr::filter(duplicated(tmp) | duplicated(tmp, fromLast = TRUE))
+      
+      chr[i] <- p0(
+        sl(p1(cols_[1:i]), char_), 
+        " - Duplictes: ", cl(nrow(tab_) == 0, sc(nrow(tab_)))
+        )
+    }
+    return(chr)
+  }
+  
+  na <- function(.source, .target, .cols) {
+    s_ <- t_ <- c()
+    for (i in .cols) {
+      s_[i] <- sum(is.na(.source[[i]]))
+      t_[i] <- sum(is.na(.target[[i]]))
+    }
+    l0_ <- max(nchar(names(s_))) + 2
+    l1_ <- max(purrr::map_chr(s_, sc))
+    purrr::pmap_chr(
+      .l = list(names(s_), s_, t_),
+      .f = ~ p0(
+        sl(p0(..1, ": "), l0_), 
+        "Source: ", cl(..2 == 0, sl(sc(..2), l1_)), " - ",
+        "Target: ", cl(..3 == 0, sc(..3))
+        )
+      )
+  }
+
+  
+  cat(bd("\nCheck ID Columns ----------------------------------------------\n"))
+  cat(sep = "\n",
+    p0("Source dataset contains 'id' column: ", cl("id" %in% cols_s_, "id" %in% cols_s_)),
+    p0("Target dataset contains 'id' column: ", cl("id" %in% cols_t_, "id" %in% cols_s_))
+  )
+  
+  cat(bd("\nCheck Overlapping Columns -------------------------------------\n"))
+  cat(sep = "\n",
+    p0(le(cols_e_), " column(s) in BOTH datasets: ", bd(p1(cols_e_))),
+    p0(le(cols_ns_), " column(s) only in the Source dataset: ", bd(p1(cols_ns_))),
+    p0(le(cols_nt_), " column(s) only in the Target dataset: ", bd(p1(cols_nt_)))
+  )
+
+  cat(bd("\nCheck IDs -----------------------------------------------------\n"))
+  cat(sep = "\n",
+    p0("Source Dataset has unique IDs: ", cl(!ad(.source[["id"]]), !ad(.source[["id"]]))),
+    p0("Target Dataset has unique IDs: ", cl(!ad(.target[["id"]]), !ad(.target[["id"]])))
+  )
+  
+  cat(bd("\nCheck Missing Values ------------------------------------------\n"))
+  cat(na(.source, .target, cols_e_), sep = "\n")
+  
+  cat(bd("\nCheck Source Dataset Combination ------------------------------\n"))
+  cat(un(.source, cols_e_), sep = "\n")
+  
+  cat(bd("\nCheck Target Dataset Combination ------------------------------\n"))
+  cat(un(.target, cols_e_), sep = "\n")
+
+  cat(bd("\nCheck Rows ----------------------------------------------------\n"))
+  cat(sep = "\n",
+    p0("Source Dataset contains ", bd(sc(nrow(.source)), "rows")),
+    p0("Target Dataset contains ", bd(sc(nrow(.target)), "rows"))
+  )
+
+  cat(bd("\nEstimate Memory Allocation ------------------------------------\n"))
+  cat(sep = "\n",
+    p0("Similarity Matrix will contain ", bd(sc(nrow(.target) * nrow(.source))), " elements"),
+    p0("Estimated memory allocation: ", bd(sc(nrow(.target) * nrow(.source) * 8 * 20 / 1e9, .01)), " GB"),
+    p0("Consider setting the .chunk argument in match_data() to more than 1")
+  )
+}
+```
+  
+```{r example-check_data, eval=FALSE}
+check_data(table_source, table_target)
+```
+  
+```{r tests-check_data}
+test_that("check_data works", {
+  expect_true(inherits(check_data, "function")) 
+})
+```
+
+## filter_duplicates
+```{r function-filter_duplicates}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .data A dataframe
+#' @param ... Any number of columns to check
+#'
+#' @return A dataframe
+#' 
+#' @export
+filter_duplicates <- function(.data, ...) {
+  tmp_ <- NULL
+  vars_ <- dplyr::enquos(...)
+  tibble::as_tibble(.data) %>%
+    dplyr::mutate(tmp_ = paste0(!!!vars_)) %>%
+    dplyr::filter(duplicated(tmp_) |duplicated(tmp_, fromLast = TRUE)) %>%
+    dplyr::select(-tmp_) %>%
+    dplyr::arrange(!!!vars_)
+}
+```
+  
+```{r example-filter_duplicates}
+# filter_duplicates()
+```
+  
+```{r tests-filter_duplicates}
+test_that("filter_duplicates works", {
+  expect_true(inherits(filter_duplicates, "function")) 
+})
+```
+  
+## make_unique
+    
+```{r function-make_unique}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .data A dataframe
+#' @param ... Any number of columns to check
+#' @param .rem All or Last
+#'
+#' @return A dataframe
+#' 
+#' @export
+make_unique <- function(.data, ..., .rem = c("all", "last")) {
+  rem_ <- match.arg(.rem, c("all", "last"))
+  tmp_ <- NULL
+  vars_ <- dplyr::enquos(...)
+  tab_ <- tibble::as_tibble(.data) %>%
+    dplyr::mutate(tmp_ = paste0(!!!vars_))
+
+  if (rem_ == "all") {
+    tab_ <- dplyr::filter(tab_, !(duplicated(tmp_) | duplicated(tmp_, fromLast = TRUE)))
+  } else {
+    tab_ <- dplyr::filter(tab_, !(duplicated(tmp_)))
+  }
+
+  dplyr::select(tab_, -tmp_)
+}
+```
+  
+```{r example-make_unique}
+# make_unique()
+```
+  
+```{r tests-make_unique}
+test_that("make_unique works", {
+  expect_true(inherits(make_unique, "function")) 
+})
+```
+  
+
+
+
+```{r development-inflate, eval=FALSE}
+# Run but keep eval=FALSE to avoid infinite loop
+# Execute in the console directly
+fusen::inflate(flat_file = "dev/flat_checks.Rmd", vignette_name = NA)
+```
+

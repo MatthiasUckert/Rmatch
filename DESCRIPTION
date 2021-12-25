@@ -1,12 +1,38 @@
 Package: Rmatch
-Version: 0.0.0.9000
 Title: A General Package For Any Matching Tasks
+Version: 0.0.0.9000
+Authors@R: 
+    person("Matthias", "Uckert", , "Matthias.Uckert@Outlook.com", role = c("aut", "cre"))
 Description: ...
-Authors@R: person(given = "Matthias",
-       family = "Uckert",
-       role = c("aut", "cre"),
-       email = "Matthias.Uckert@Outlook.com")
 License: MIT + file LICENSE
+Depends: 
+    R (>= 2.10)
+Imports: 
+    carrier,
+    crayon,
+    dplyr,
+    furrr,
+    future,
+    magrittr,
+    progress,
+    purrr,
+    rlang,
+    scales,
+    stats,
+    stringdist,
+    stringi,
+    tibble,
+    tidyr,
+    utils
+Suggests: 
+    kableExtra,
+    knitr,
+    printr,
+    rmarkdown,
+    tidyverse
+VignetteBuilder: 
+    knitr
 Encoding: UTF-8
+LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
