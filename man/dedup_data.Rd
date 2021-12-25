@@ -24,5 +24,17 @@ A dataframe
 Description
 }
 \examples{
-# dedup_data()
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+tab_match <- match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .method = "osa", 
+  .progress = TRUE
+)
+tab_score <- scores_data(tab_match)
+dedup_data(tab_score, tab_source, tab_target, "score_mean")
 }

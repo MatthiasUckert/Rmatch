@@ -4,20 +4,20 @@
 #' 
 #' Description
 #' 
-#' @param .s 
+#' @param .source
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' @param .t 
+#' @param .target
 #' The Traget Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @return Messages
 #' 
 #' @export
 #' @examples
-#' check_data(source, target)
-check_data <- function(.s, .t) {
-  cols_s_  <- colnames(.s)
-  cols_t_  <- colnames(.t)
+#' check_data(table_source, table_target)
+check_data <- function(.source, .target) {
+  cols_s_  <- colnames(.source)
+  cols_t_  <- colnames(.target)
   cols_e_  <- cols_s_[cols_s_ %in% cols_t_]
   cols_ns_ <- cols_s_[!cols_s_ %in% cols_t_]
   cols_nt_ <- cols_t_[!cols_t_ %in% cols_s_]
@@ -51,11 +51,11 @@ check_data <- function(.s, .t) {
     return(chr)
   }
   
-  na <- function(.s, .t, .cols) {
+  na <- function(.source, .target, .cols) {
     s_ <- t_ <- c()
     for (i in .cols) {
-      s_[i] <- sum(is.na(.s[[i]]))
-      t_[i] <- sum(is.na(.t[[i]]))
+      s_[i] <- sum(is.na(.source[[i]]))
+      t_[i] <- sum(is.na(.target[[i]]))
     }
     l0_ <- max(nchar(names(s_))) + 2
     l1_ <- max(purrr::map_chr(s_, sc))
@@ -85,29 +85,29 @@ check_data <- function(.s, .t) {
 
   cat(bd("\nCheck IDs -----------------------------------------------------\n"))
   cat(sep = "\n",
-    p0("Source Dataset has unique IDs: ", cl(!ad(.s[["id"]]), !ad(.s[["id"]]))),
-    p0("Target Dataset has unique IDs: ", cl(!ad(.t[["id"]]), !ad(.s[["id"]])))
+    p0("Source Dataset has unique IDs: ", cl(!ad(.source[["id"]]), !ad(.source[["id"]]))),
+    p0("Target Dataset has unique IDs: ", cl(!ad(.target[["id"]]), !ad(.target[["id"]])))
   )
   
   cat(bd("\nCheck Missing Values ------------------------------------------\n"))
-  cat(na(.s, .t, cols_e_), sep = "\n")
+  cat(na(.source, .target, cols_e_), sep = "\n")
   
   cat(bd("\nCheck Source Dataset Combination ------------------------------\n"))
-  cat(un(.s, cols_e_), sep = "\n")
+  cat(un(.source, cols_e_), sep = "\n")
   
   cat(bd("\nCheck Target Dataset Combination ------------------------------\n"))
-  cat(un(.t, cols_e_), sep = "\n")
+  cat(un(.target, cols_e_), sep = "\n")
 
   cat(bd("\nCheck Rows ----------------------------------------------------\n"))
   cat(sep = "\n",
-    p0("Source Dataset contains ", bd(sc(nrow(.s)), "rows")),
-    p0("Target Dataset contains ", bd(sc(nrow(.t)), "rows"))
+    p0("Source Dataset contains ", bd(sc(nrow(.source)), "rows")),
+    p0("Target Dataset contains ", bd(sc(nrow(.target)), "rows"))
   )
 
   cat(bd("\nEstimate Memory Allocation ------------------------------------\n"))
   cat(sep = "\n",
-    p0("Similarity Matrix will contain ", bd(sc(nrow(.t) * nrow(.s))), " elements"),
-    p0("Estimated memory allocation: ", bd(sc(nrow(.t) * nrow(.s) * 8 * 20 / 1e9, .01)), " GB"),
+    p0("Similarity Matrix will contain ", bd(sc(nrow(.target) * nrow(.source))), " elements"),
+    p0("Estimated memory allocation: ", bd(sc(nrow(.target) * nrow(.source) * 8 * 20 / 1e9, .01)), " GB"),
     p0("Consider setting the .chunk argument in match_data() to more than 1")
   )
 }

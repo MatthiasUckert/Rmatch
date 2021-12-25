@@ -4,10 +4,10 @@
 #' 
 #' Description
 #' 
-#' @param .s 
+#' @param .source 
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' @param .t 
+#' @param .target 
 #' The Traget Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
@@ -21,51 +21,51 @@
 #' @param .must_match Columns that must be matched perfectly
 #' @param .progress Should a progress bar be shown?
 #' See stringdist package
-#' @return A Dataframe
+#' @param .chunk Chunk your data
+#'
+#' @return A dataframe
 #' 
 #' @export
 #' @examples
-#' library(Rmatch)
-#' match_data(source, target, c("name", "iso3", "city"), .min_sim = 0, .must_match = "iso3")
-match_data <- function(.s, .t, .cols, .must_match = NULL, .max_match = 10, 
-                       .min_sim = .8, .method = "osa", .progress = TRUE) {
-  
-  sim <- NULL
-  
-  if (!is.null(.must_match)) {
-    vs_ <- tidyr::unite(.s[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    ls_ <- split(.s, vs_)
-    
-    vt_ <- tidyr::unite(.t[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    lt_ <- split(.t, vt_)
-    
-    lt_ <- lt_[names(lt_) %in% names(ls_)]
-    ls_ <- ls_[names(lt_)]
+#' match_data(
+#'   .source = table_source[1:100, ],
+#'   .target = table_target[1:999, ],
+#'   .cols = c("name", "iso3", "city"),
+#'   .min_sim = .2,
+#'   .max_match = 10,
+#'   .must_match = "iso3",
+#'   .chunk = 5, 
+#'   .method = "osa", 
+#'   .progress = TRUE
+#' )
+match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
+                            .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
+  if (.chunk > 1) {
+    ls_ <- split(
+      x = .source,
+      f = rep(1:.chunk, each = ceiling(nrow(.source) / .chunk))[1:nrow(.source)]
+    )
   } else {
-    ls_ <- list(.s)
-    lt_ <- list(.t)
+    ls_ <- list("1" = .source)
   }
 
-  if (.progress) pb <- progress::progress_bar$new(total = length(ls_))
-  purrr::map2_dfr(
+  
+  cols_ <- .cols[!.cols %in% .must_match]
+  
+  purrr::imap_dfr(
     .x = ls_,
-    .y = lt_,
     .f = ~ {
-      if (.progress) pb$tick()
-      tab_ <- match_col(.x, .y, .cols[1], .max_match, .min_sim, .method)
-
-      if (length(.cols) > 1) {
-        s_ <- dplyr::left_join(tab_, .x, by = c("id_s" = "id"))
-        t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
-
-        for (i in 2:length(.cols)) {
-          a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-
-          tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-        }
-      }
-      gc()
-      return(tab_)
+      if (.progress) cat("\rITERATION", .y)
+      help_match_data(
+        .source = .x,
+        .target = .target,
+        .cols = cols_,
+        .must_match = .must_match,
+        .max_match = .max_match,
+        .min_sim = .min_sim,
+        .method = .method,
+        .progress = .progress
+      )
     }
   )
 }

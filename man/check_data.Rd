@@ -4,13 +4,13 @@
 \alias{check_data}
 \title{Title}
 \usage{
-check_data(.s, .t)
+check_data(.source, .target)
 }
 \arguments{
-\item{.s}{The Source Dataframe.
+\item{.source}{The Source Dataframe.
 Must contain a unique column id and the columns you want to match on}
 
-\item{.t}{The Traget Dataframe.
+\item{.target}{The Traget Dataframe.
 Must contain a unique column id and the columns you want to match on}
 }
 \value{
@@ -20,5 +20,5 @@ Messages
 Description
 }
 \examples{
-check_data(source, target)
+check_data(table_source, table_target)
 }

@@ -4,10 +4,10 @@
 #' 
 #' Description
 #' 
-#' @param .s 
+#' @param .source 
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' @param .t 
+#' @param .target 
 #' The Traget Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .col 
@@ -22,7 +22,16 @@
 #'
 #' @return A Dataframe
 #' @noRd
-match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
+#' @examples
+#' match_col(
+#'   .source = table_source[1:100, ],
+#'   .target = table_target[1:999, ],
+#'   .col = "name",
+#'   .max_match = 10,
+#'   .min_sim = .2,
+#'   .method = "osa"
+#' )
+match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
   V1 <- value <- id <- name <- id_t <- sim <- NULL
   
   
@@ -34,8 +43,8 @@ match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "o
     )
   )
   tab_ <- stringdist::stringsimmatrix(
-    a = .s[[.col]],
-    b = .t[[.col]],
+    a = .source[[.col]],
+    b = .target[[.col]],
     method = method_
   ) %>%
     tibble::as_tibble() %>%
@@ -48,8 +57,8 @@ match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "o
     dplyr::rename(id_s = id, id_t = name) %>%
     dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
     suppressWarnings()
-  tab_[["id_s"]] <- .s[["id"]][tab_[["id_s"]]]
-  tab_[["id_t"]] <- .t[["id"]][tab_[["id_t"]]]
+  tab_[["id_s"]] <- .source[["id"]][tab_[["id_s"]]]
+  tab_[["id_t"]] <- .target[["id"]][tab_[["id_t"]]]
   colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .col))
   return(tab_)
 }

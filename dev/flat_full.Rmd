@@ -6,124 +6,33 @@ editor_options:
 ---
 
 <!-- Run this 'development' chunk -->
+
 <!-- Store every call to library() that you need to explore your functions -->
 
 ```{r development, include=FALSE}
 library(testthat); library(tidyverse); library(stringi); library(fst)
 ```
 
+```{=html}
 <!--
  You need to run the 'description' chunk in the '0-dev_history.Rmd' file before continuing your code there.
 
 If it is the first time you use {fusen}, after 'description', you can directly run the last chunk of the present file with inflate() inside.
---> 
-
+-->
+```
 ```{r development-2}
 pkgload::load_all(path = here::here(), export_all = FALSE)
 ```
 
-# Datasets
-```{r function-source, filename = "datasets"}
-#' Example Dataset: Source
-#'
-#'
-#' @format A data frame with 2,426 rows and 5 variables:
-#' \describe{
-#'   \item{id}{A unique identifier}
-#'   \item{name}{Company name}
-#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
-#'   \item{city}{City Name}
-#'   \item{address}{Address Name}
-#' }
-"source"
-```
-
-```{r function-target, filename = "datasets"}
-#' Example Dataset: Target
-#'
-#'
-#' @format A data frame with 4,671 rows and 5 variables:
-#' \describe{
-#'   \item{id}{A unique identifier}
-#'   \item{name}{Company name}
-#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
-#'   \item{city}{City Name}
-#'   \item{address}{Address Name}
-#' }
-"target"
-```
-
-```{r function-matches, filename = "datasets"}
-#' Example Dataset: Matches
-#'
-#'
-#' @format A data frame with 2,426 rows and 11 variables:
-#' \describe{
-#'   \item{id_s}{Source Dataframe: A unique identifier}
-#'   \item{id_t}{Traget Dataframe: A unique identifier}
-#'   \item{name_s}{Source Dataframe: Company name}
-#'   \item{name_t}{Traget Dataframe: Company name}
-#'   \item{iso3_s}{Source Dataframe: ISO 3166-1 alpha-3 country codes}
-#'   \item{iso3_t}{Traget Dataframe: ISO 3166-1 alpha-3 country codes}
-#'   \item{city_s}{Source Dataframe: City Name}
-#'   \item{city_t}{Source Dataframe: City Name}
-#'   \item{address_s}{Source Dataframe: Address Name}
-#'   \item{address_t}{Traget Dataframe: Address Name}
-#'   \item{match}{Indicator for matched names (always 1)}
-#' }
-"matches"
-```
-
-```{r function-legal_form_gleif, filename = "datasets"}
-#' Dataset: Legal Forms from the GLEIF
-#'
-#'
-#' @format A data frame with 3,322 rows and 3 variables:
-#' \describe{
-#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
-#'   \item{legal_form_orig}{Original legal form}
-#'   \item{legal_form_stand}{Standardized legal form}
-#' }
-"legal_form_gleif"
-```
-
-```{r function-legal_form_ecb, filename = "datasets"}
-#' Dataset: Legal Forms from the ECB
-#'
-#'
-#' @format A data frame with 2,399 rows and 3 variables:
-#' \describe{
-#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
-#'   \item{legal_form_orig}{Original legal form}
-#'   \item{legal_form_stand}{Standardized legal form}
-#' }
-"legal_form_ecb"
-```
-
-```{r function-legal_form_all, filename = "datasets"}
-#' Dataset: Combined Legal Forms from the GLEIF and ECB
-#'
-#'
-#' @format A data frame with 4,933 rows and 3 variables:
-#' \describe{
-#'   \item{iso3}{ISO 3166-1 alpha-3 country codes}
-#'   \item{legal_form_orig}{Original legal form}
-#'   \item{legal_form_stand}{Standardized legal form}
-#' }
-"legal_form_all"
-```
-
-
-
 # Functions
 
-## standardize_str
+## HELP: standardize_str
 ```{r dev-standardize_str}
 .str <- "International Business Corporation"
 .op = c("space", "punct", "case", "utf8")
 ```
 
-
+### Function
 
 ```{r function-standardize_str}
 #' Title
@@ -164,20 +73,26 @@ standardize_str <- function(.str, .op = c("space", "punct", "case", "utf8")) {
   
 }
 ```
-  
+
+### Example/Test
 ```{r example-standardize_str, eval=FALSE}
 standardize_str(c("jkldsa   jkdhas   äää  §$ ## #'''"))
 ```
-  
+
 ```{r tests-standardize_str}
 test_that("standardize_str works", {
   expect_true(inherits(standardize_str, "function")) 
 })
 ```
-  
 
-## standardize_data
-    
+## MAIN: standardize_data
+```{r dev-standardize_data}
+.data <- table_source
+.cols <- c("name", "iso3", "city", "address")
+.op = c("space", "punct", "case", "utf8")
+```
+
+### Function
 ```{r function-standardize_data}
 #' Title
 #' 
@@ -185,43 +100,46 @@ test_that("standardize_str works", {
 #' 
 #' @param .data A dataframe
 #' @param .cols Columns to standardize
-#' @param .op Operations to perform
+#' @param .fun Function for standardization, if NULL standardize_str() is used
 #'
 #' @return A dataframe
 #' 
 #' @export
-standardize_data <- function(.data, .cols, .op = c("space", "punct", "case", "utf8")) {
-    
+standardize_data <- function(.data, .cols, .fun = NULL) {
   tab_ <- .data
-  for (i in .cols) {
-    tab_[[i]] <- standardize_str(tab_[[i]])
+  if (is.null(.fun)) {
+    f_ <- standardize_str
+  } else {
+    f_ <- .fun
   }
   
+  for (i in .cols) {
+    tab_[[i]] <- f_(tab_[[i]])
+  }
   return(tab_)
-  
 }
 ```
-  
+
+### Example/Test
 ```{r example-standardize_data, eval=FALSE}
-standardize_data(source, c("name", "iso3", "city", "address"))
+standardize_data(table_source, c("name", "iso3", "city", "address"))
 ```
-  
+
 ```{r tests-standardize_data}
 test_that("standardize_data works", {
   expect_true(inherits(standardize_data, "function")) 
 })
 ```
-  
-## extract_legal_form
+
+## MAIN: extract_legal_form
 ```{r dev-extract_legal_form}
-.data <- source
+.data <- table_source
 .col <- "name"
 .legal_forms <- tibble(.rows = 0)
 .workers = future::availableCores()
 ```
 
-
-
+### Function
 ```{r function-extract_legal_form}
 #' Title
 #' 
@@ -282,37 +200,39 @@ extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .worker
   
 }
 ```
-  
+
+### Example/Test
 ```{r example-extract_legal_form, eval=FALSE}
-extract_legal_form(source, "name")
+extract_legal_form(table_source[1:100, ], "name", .workers = 1)
 ```
-  
+
 ```{r tests-extract_legal_form}
 test_that("extract_legal_form works", {
   expect_true(inherits(extract_legal_form, "function")) 
 })
 ```
 
-## match_col
-
+## HELP: match_col
 ```{r dev-match_col}
-.s <- source[1:100, ]
-.t <- target[1:1000, ]
+.source <- table_source[1:100, ]
+.target <- table_target[1:1000, ]
 .col <- "name"
 .method = "osa"
 .max_match = 10
 .min_sim = 0
 ```
 
+### Function
+
 ```{r function-match_col}
 #' Match a on a single column
 #' 
 #' Description
 #' 
-#' @param .s 
+#' @param .source 
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' @param .t 
+#' @param .target 
 #' The Traget Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .col 
@@ -326,7 +246,7 @@ test_that("extract_legal_form works", {
 #' See stringdist package
 #'
 #' @return A Dataframe
-match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
+match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
   V1 <- value <- id <- name <- id_t <- sim <- NULL
   
   
@@ -338,8 +258,8 @@ match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "o
     )
   )
   tab_ <- stringdist::stringsimmatrix(
-    a = .s[[.col]],
-    b = .t[[.col]],
+    a = .source[[.col]],
+    b = .target[[.col]],
     method = method_
   ) %>%
     tibble::as_tibble() %>%
@@ -352,42 +272,53 @@ match_col <- function(.s, .t, .col, .max_match = 10, .min_sim = .8, .method = "o
     dplyr::rename(id_s = id, id_t = name) %>%
     dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
     suppressWarnings()
-  tab_[["id_s"]] <- .s[["id"]][tab_[["id_s"]]]
-  tab_[["id_t"]] <- .t[["id"]][tab_[["id_t"]]]
+  tab_[["id_s"]] <- .source[["id"]][tab_[["id_s"]]]
+  tab_[["id_t"]] <- .target[["id"]][tab_[["id_t"]]]
   colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .col))
   return(tab_)
 }
 ```
-  
-  
+
+### Example/Test
+```{r example-match_col}
+match_col(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .col = "name",
+  .max_match = 10,
+  .min_sim = .2,
+  .method = "osa"
+)
+```
+
 ```{r tests-match_col}
 test_that("match_col works", {
   expect_true(inherits(match_col, "function")) 
 })
-```  
+```
 
-## match_data
-```{r dev-match_data}
-.s <- source[1:100, ]
-.t <- target[1:1000, ]
-.cols <- c("name", "iso3", "city", "address")
+## HELP: help_match_data
+```{r dev-help_match_data}
+.source = table_source[1:100, ]
+.target = table_target[1:999, ]
+.cols = c("name", "iso3", "city", "address")
 .method = "osa"
 .max_match = 10
 .min_sim = 0
-.chunk <- 20
 .progress = TRUE
-.must_match <- c("iso3")
+.must_match = c("iso3")
 ```
-    
-```{r function-match_data}
+
+### Function
+```{r function-help_match_data}
 #' Title
 #' 
 #' Description
 #' 
-#' @param .s 
+#' @param .source 
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' @param .t 
+#' @param .target 
 #' The Traget Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
@@ -403,27 +334,31 @@ test_that("match_col works", {
 #' See stringdist package
 #' @return A Dataframe
 #' 
-#' @export
-match_data <- function(.s, .t, .cols, .must_match = NULL, .max_match = 10, 
+help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10, 
                        .min_sim = .8, .method = "osa", .progress = TRUE) {
   
   sim <- NULL
   
   if (!is.null(.must_match)) {
-    vs_ <- tidyr::unite(.s[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    ls_ <- split(.s, vs_)
+    vs_ <- tidyr::unite(.source[, .must_match], "tmp", dplyr::everything())[["tmp"]]
+    ls_ <- split(.source, vs_)
     
-    vt_ <- tidyr::unite(.t[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    lt_ <- split(.t, vt_)
+    vt_ <- tidyr::unite(.target[, .must_match], "tmp", dplyr::everything())[["tmp"]]
+    lt_ <- split(.target, vt_)
     
     lt_ <- lt_[names(lt_) %in% names(ls_)]
     ls_ <- ls_[names(lt_)]
   } else {
-    ls_ <- list(.s)
-    lt_ <- list(.t)
+    ls_ <- list(.source)
+    lt_ <- list(.target)
   }
 
-  if (.progress) pb <- progress::progress_bar$new(total = length(ls_))
+  if (.progress) {
+    pb <- progress::progress_bar$new(
+      total = length(ls_),
+      clear = FALSE, show_after = 1
+      )
+  }
   purrr::map2_dfr(
     .x = ls_,
     .y = lt_,
@@ -447,10 +382,117 @@ match_data <- function(.s, .t, .cols, .must_match = NULL, .max_match = 10,
   )
 }
 ```
+
+### Example/Test
+
+```{r example-help_match_data, eval=FALSE}
+help_match_data(
+  .source = table_source[1:100, ], 
+  .target = table_target[1:999, ], 
+  .cols = c("name", "iso3", "city"), 
+  .max_match = 10, 
+  .min_sim = .2, 
+  .must_match = "iso3",
+  .method = "osa",
+  .progress = TRUE
+  )
+```
+
+
+
+```{r tests-help_match_data}
+test_that("match_data works", {
+  expect_true(inherits(help_match_data, "function")) 
+})
+```
+
+## MAIN: match_data
+```{r dev-match_data}
+.source = table_source[1:100, ]
+.target = table_target[1:999, ]
+.cols = c("name", "iso3", "city", "address")
+.method = "osa"
+.max_match = 10
+.min_sim = 0
+.progress = TRUE
+.must_match = c("iso3")
+.chunk = 5
+```
+
+### Function
+```{r function-match_data}
+#' Title
+#' 
+#' Description
+#' 
+#' @param .source 
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .target 
+#' The Traget Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .cols 
+#' The column names to match as character vector
+#' @param .max_match 
+#' Maximum number of matches to return (Default = 10)
+#' @param .min_sim 
+#' Minimum Similarity as defined by the chosen method
+#' @param .method 
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' @param .must_match Columns that must be matched perfectly
+#' @param .progress Should a progress bar be shown?
+#' See stringdist package
+#' @param .chunk Chunk your data
+#'
+#' @return A dataframe
+#' 
+#' @export
+match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
+                            .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
+  if (.chunk > 1) {
+    ls_ <- split(
+      x = .source,
+      f = rep(1:.chunk, each = ceiling(nrow(.source) / .chunk))[1:nrow(.source)]
+    )
+  } else {
+    ls_ <- list("1" = .source)
+  }
+
   
+  cols_ <- .cols[!.cols %in% .must_match]
+  
+  purrr::imap_dfr(
+    .x = ls_,
+    .f = ~ {
+      if (.progress) cat("\rITERATION", .y)
+      help_match_data(
+        .source = .x,
+        .target = .target,
+        .cols = cols_,
+        .must_match = .must_match,
+        .max_match = .max_match,
+        .min_sim = .min_sim,
+        .method = .method,
+        .progress = .progress
+      )
+    }
+  )
+}
+```
+
+### Example/Test
 ```{r example-match_data, eval=FALSE}
-library(Rmatch)
-match_data(source, target, c("name", "iso3", "city"), .min_sim = 0, .must_match = "iso3")
+match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .must_match = "iso3",
+  .chunk = 5, 
+  .method = "osa", 
+  .progress = TRUE
+)
 ```
 
 ```{r tests-match_data}
@@ -459,12 +501,12 @@ test_that("match_data works", {
 })
 ```
 
-## uniqueness_vec
+## HELP: uniqueness_vec
 ```{r dev-uniqueness_vec}
 .vec <- source[["name"]][1:10]
 ```
 
-
+### Function
 ```{r function-uniqueness_vec}
 #' Uniquness/Rarity of a vector 
 #' 
@@ -485,26 +527,26 @@ uniqueness_vec <- function(.vec) {
   1 - (v3_ / max(v3_))
 }
 ```
-  
+
+### Example/Test
 ```{r example-uniqueness_vec, eval=FALSE}
-uniqueness_vec(source[["name"]][1:10])
+uniqueness_vec(table_source[["name"]][1:10])
 ```
-  
+
 ```{r tests-uniqueness_vec}
 test_that("uniqueness_vec works", {
   expect_true(inherits(uniqueness_vec, "function")) 
 })
 ```
-  
-## uniqueness_data
 
+## MAIN: uniqueness_data
 ```{r dev-uniqueness_data}
-.data <- source
-.cols <- c("name", "iso3", "city", "address")
+.data <- table_source
+.cols <- c("name", "city", "address")
 .type <- "source"
 ```
 
-
+### Function
 ```{r function-uniqueness_data}
 #' Title
 #' 
@@ -518,84 +560,125 @@ test_that("uniqueness_vec works", {
 #' 
 #' @export
 uniqueness_data <- function(.data, .cols, .type = c("source", "target")) {
-  id <- NULL
+  id <- tmp <- NULL
   type_ <- match.arg(.type, c("source", "target"))
   type_ <- substr(type_, 1, 1)
-  tab_ <- .data
-
-  for (i in seq_len(length(.cols))) {
-    tab_[[paste0("uni_", type_, i)]] <- uniqueness_vec(tab_[[.cols[i]]])
-  }
-  
-  tab_ <- dplyr::select(tab_, id, dplyr::starts_with("uni_"))
-  
-  if (.type == "source") {
-    dplyr::rename(tab_, id_s = id)
-  } else {
-    dplyr::rename(tab_, id_t = id)
-  }
-  
+  tab_ <- .data[, c("id", .cols)] %>%
+    tidyr::unite(tmp, !dplyr::matches("^id$"))
+  tab_[[paste0("uni_", type_)]] <- uniqueness_vec(tab_[["tmp"]])
+  tab_ <- dplyr::select(tab_, -tmp)
+  colnames(tab_) <- c(paste0("id_", type_), paste0("uni_", type_))
+  return(tab_)
 }
 ```
-  
+
+### Example/Test
 ```{r example-uniqueness_data, eval=FALSE}
-uniqueness_data(source, c("name", "iso3", "city", "address"), "source")
+uniqueness_data(table_source[1:100, ], c("name", "iso3", "city", "address"), "source")
 ```
-  
+
 ```{r tests-uniqueness_data}
 test_that("uniqueness_data works", {
   expect_true(inherits(uniqueness_data, "function")) 
 })
 ```
-  
-  
-## scores_data
+
+## MAIN: scores_data
 ```{r dev-scores_data}
-.data <- tab_match
+.data <- match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .must_match = "iso3",
+  .method = "osa", 
+  .progress = FALSE
+)
+.weights <- c(.8, 0, .2)
 ```
 
+### Function
 ```{r function-scores_data}
 #' Score Data
 #' 
 #' Description
 #' 
 #' @param .data A dataframe
+#' @param .weights Custom weights
+#' @param .training A training dataset
 #'
 #' @return A dataframe
 #' 
 #' @export
-scores_data <- function(.data) {
+scores_data <- function(.data, .weights = NULL, .training = NULL) {
   id_s <- id_t <- NULL
   tab_ <- .data
   cols_ <- colnames(tab_)
   cols_ <- cols_[grepl("^sim_|^uni_", cols_)]
+  mat_ <- as.matrix(tab_[, cols_])
   
-  tab_ %>%
-    dplyr::select(id_s, id_t) %>%
-    dplyr::mutate(
-      score_mean = rowMeans(as.matrix(tab_[, cols_]), na.rm = TRUE)
-    )
+  if (!is.null(.weights)) {
+    mat_ <- mat_ * .weights
+    tab_ %>%
+      dplyr::select(id_s, id_t) %>%
+      dplyr::mutate(
+        score_mean = rowSums(mat_, na.rm = TRUE),
+        score_square = rowSums(mat_^2, na.rm = TRUE)
+      )
+  } else {
+    tab_ %>%
+      dplyr::select(id_s, id_t) %>%
+      dplyr::mutate(
+        score_mean = rowMeans(mat_, na.rm = TRUE),
+        score_square = rowMeans(mat_^2, na.rm = TRUE)
+      )
+  }
+  
+  
+
   
 }
 ```
-  
+
+### Example/Test
+```{r example-scores_data, eval=FALSE}
+tab_match <- match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .method = "osa", 
+  .progress = TRUE
+)
+tab_score <- scores_data(tab_match)
+```
+
 ```{r tests-scores_data}
 test_that("scores_data works", {
   expect_true(inherits(scores_data, "function")) 
 })
 ```
-   
-   
-## dedup_data
+
+## MAIN: dedup_data
 ```{r dev-dedup_data}
-.score <- tab_score
-.source <- source
-.target <- target
+tab_match <- match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .method = "osa", 
+  .progress = TRUE
+)
+.score <- scores_data(tab_match)
+.source <- table_source
+.target <- table_target
 .col <- "score_mean"
 ```
 
-
-
+### Function
 ```{r function-dedup_data}
 #' Deduplicate Data
 #' 
@@ -628,42 +711,49 @@ dedup_data <- function(.score, .source, .target, .col) {
     dplyr::filter(!duplicated(id_t)) %>%
     dplyr::distinct(id_s, .keep_all = TRUE) %>%
     dplyr::full_join(.source, c("id_s" = "id"), FALSE, suffix = c("_s", "_t")) %>%
-    dplyr::left_join(.target, c("id_t" = "id"), FALSE, suffix = c("_s", "_t")) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(diff_name = list(diffmatchpatch::diff_make(name_s, name_t)))
+    dplyr::left_join(.target, c("id_t" = "id"), FALSE, suffix = c("_s", "_t"))
   
   tab_ <- tab_[, c("id_s", "id_t", .col, col_e_)]
+  colnames(tab_) <- c("id_s", "id_t", "score", col_e_)
   return(tab_)
 }
 ```
-  
-```{r example-dedup_data}
-# dedup_data()
+
+### Example/Test
+```{r example-dedup_data, eval=FALSE}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+tab_match <- match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .method = "osa", 
+  .progress = TRUE
+)
+tab_score <- scores_data(tab_match)
+dedup_data(tab_score, tab_source, tab_target, "score_mean")
 ```
-  
+
 ```{r tests-dedup_data}
 test_that("dedup_data works", {
   expect_true(inherits(dedup_data, "function")) 
 })
 ```
-  
-   
 
+# Inflate your package
+
+You're one inflate from paper to box. Build your package from this very Rmd using `fusen::inflate()`
+
+-   Verify your `"DESCRIPTION"` file has been updated
+-   Verify your function is in `"R/"` directory
+-   Verify your test is in `"tests/testthat/"` directory
+-   Verify this Rmd appears in `"vignettes/"` directory
 
 ```{r development-inflate, eval=FALSE}
 fusen::inflate(
   flat_file = "dev/flat_full.Rmd", 
-  vignette_name = NA, overwrite = "no"
+  vignette_name = NA, overwrite = TRUE
   )
 ```
-
-
-# Inflate your package
-
-You're one inflate from paper to box.
-Build your package from this very Rmd using `fusen::inflate()`
-
-- Verify your `"DESCRIPTION"` file has been updated
-- Verify your function is in `"R/"` directory
-- Verify your test is in `"tests/testthat/"` directory
-- Verify this Rmd appears in `"vignettes/"` directory

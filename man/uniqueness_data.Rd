@@ -20,5 +20,5 @@ A dataframe
 Description
 }
 \examples{
-uniqueness_data(source, c("name", "iso3", "city", "address"), "source")
+uniqueness_data(table_source[1:100, ], c("name", "iso3", "city", "address"), "source")
 }

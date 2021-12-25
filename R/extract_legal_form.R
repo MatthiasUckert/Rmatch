@@ -15,7 +15,7 @@
 #' 
 #' @export
 #' @examples
-#' extract_legal_form(source, "name")
+#' extract_legal_form(table_source[1:100, ], "name", .workers = 1)
 extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
   tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
   

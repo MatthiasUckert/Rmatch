@@ -17,7 +17,19 @@
 #' 
 #' @export
 #' @examples
-#' # dedup_data()
+#' tab_source <- table_source[1:100, ]
+#' tab_target <- table_target[1:999, ]
+#' tab_match <- match_data(
+#'   .source = table_source[1:100, ],
+#'   .target = table_target[1:999, ],
+#'   .cols = c("name", "iso3", "city"),
+#'   .min_sim = .2,
+#'   .max_match = 10,
+#'   .method = "osa", 
+#'   .progress = TRUE
+#' )
+#' tab_score <- scores_data(tab_match)
+#' dedup_data(tab_score, tab_source, tab_target, "score_mean")
 dedup_data <- function(.score, .source, .target, .col) {
   id_s <- id_t <- name_s <- name_t <- NULL
   
@@ -33,10 +45,9 @@ dedup_data <- function(.score, .source, .target, .col) {
     dplyr::filter(!duplicated(id_t)) %>%
     dplyr::distinct(id_s, .keep_all = TRUE) %>%
     dplyr::full_join(.source, c("id_s" = "id"), FALSE, suffix = c("_s", "_t")) %>%
-    dplyr::left_join(.target, c("id_t" = "id"), FALSE, suffix = c("_s", "_t")) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(diff_name = list(diffmatchpatch::diff_make(name_s, name_t)))
+    dplyr::left_join(.target, c("id_t" = "id"), FALSE, suffix = c("_s", "_t"))
   
   tab_ <- tab_[, c("id_s", "id_t", .col, col_e_)]
+  colnames(tab_) <- c("id_s", "id_t", "score", col_e_)
   return(tab_)
 }

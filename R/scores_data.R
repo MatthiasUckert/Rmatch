@@ -5,20 +5,48 @@
 #' Description
 #' 
 #' @param .data A dataframe
+#' @param .weights Custom weights
+#' @param .training A training dataset
 #'
 #' @return A dataframe
 #' 
 #' @export
-scores_data <- function(.data) {
+#' @examples
+#' tab_match <- match_data(
+#'   .source = table_source[1:100, ],
+#'   .target = table_target[1:999, ],
+#'   .cols = c("name", "iso3", "city"),
+#'   .min_sim = .2,
+#'   .max_match = 10,
+#'   .method = "osa", 
+#'   .progress = TRUE
+#' )
+#' tab_score <- scores_data(tab_match)
+scores_data <- function(.data, .weights = NULL, .training = NULL) {
   id_s <- id_t <- NULL
   tab_ <- .data
   cols_ <- colnames(tab_)
   cols_ <- cols_[grepl("^sim_|^uni_", cols_)]
+  mat_ <- as.matrix(tab_[, cols_])
   
-  tab_ %>%
-    dplyr::select(id_s, id_t) %>%
-    dplyr::mutate(
-      score_mean = rowMeans(as.matrix(tab_[, cols_]), na.rm = TRUE)
-    )
+  if (!is.null(.weights)) {
+    mat_ <- mat_ * .weights
+    tab_ %>%
+      dplyr::select(id_s, id_t) %>%
+      dplyr::mutate(
+        score_mean = rowSums(mat_, na.rm = TRUE),
+        score_square = rowSums(mat_^2, na.rm = TRUE)
+      )
+  } else {
+    tab_ %>%
+      dplyr::select(id_s, id_t) %>%
+      dplyr::mutate(
+        score_mean = rowMeans(mat_, na.rm = TRUE),
+        score_square = rowMeans(mat_^2, na.rm = TRUE)
+      )
+  }
+  
+  
+
   
 }

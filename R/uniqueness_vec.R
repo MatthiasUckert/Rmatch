@@ -10,7 +10,7 @@
 #' 
 #' @noRd
 #' @examples
-#' uniqueness_vec(source[["name"]][1:10])
+#' uniqueness_vec(table_source[["name"]][1:10])
 uniqueness_vec <- function(.vec) {
   l1_ <- stringi::stri_split_fixed(.vec, " ")
   v1_ <- unlist(l1_)

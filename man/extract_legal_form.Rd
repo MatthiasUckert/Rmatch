@@ -27,5 +27,5 @@ A dataframe
 Description
 }
 \examples{
-extract_legal_form(source, "name")
+extract_legal_form(table_source[1:100, ], "name", .workers = 1)
 }

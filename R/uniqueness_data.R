@@ -12,23 +12,15 @@
 #' 
 #' @export
 #' @examples
-#' uniqueness_data(source, c("name", "iso3", "city", "address"), "source")
+#' uniqueness_data(table_source[1:100, ], c("name", "iso3", "city", "address"), "source")
 uniqueness_data <- function(.data, .cols, .type = c("source", "target")) {
-  id <- NULL
+  id <- tmp <- NULL
   type_ <- match.arg(.type, c("source", "target"))
   type_ <- substr(type_, 1, 1)
-  tab_ <- .data
-
-  for (i in seq_len(length(.cols))) {
-    tab_[[paste0("uni_", type_, i)]] <- uniqueness_vec(tab_[[.cols[i]]])
-  }
-  
-  tab_ <- dplyr::select(tab_, id, dplyr::starts_with("uni_"))
-  
-  if (.type == "source") {
-    dplyr::rename(tab_, id_s = id)
-  } else {
-    dplyr::rename(tab_, id_t = id)
-  }
-  
+  tab_ <- .data[, c("id", .cols)] %>%
+    tidyr::unite(tmp, !dplyr::matches("^id$"))
+  tab_[[paste0("uni_", type_)]] <- uniqueness_vec(tab_[["tmp"]])
+  tab_ <- dplyr::select(tab_, -tmp)
+  colnames(tab_) <- c(paste0("id_", type_), paste0("uni_", type_))
+  return(tab_)
 }

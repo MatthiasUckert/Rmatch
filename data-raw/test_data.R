@@ -2,7 +2,7 @@ library(tidyverse)
 library(openxlsx)
 library(countrycode)
 
-target <- openxlsx::read.xlsx("data-raw/orbis.xlsx") %>%
+table_target <- openxlsx::read.xlsx("data-raw/orbis.xlsx") %>%
   distinct(isin, .keep_all = TRUE) %>%
   select(-name2) %>%
   rename(name = name1) %>%
@@ -18,7 +18,7 @@ target <- openxlsx::read.xlsx("data-raw/orbis.xlsx") %>%
   mutate(across(where(is.character), toupper))
 
 
-source <- openxlsx::read.xlsx("data-raw/compustat.xlsx") %>%
+table_source <- openxlsx::read.xlsx("data-raw/compustat.xlsx") %>%
   distinct(isin, .keep_all = TRUE) %>%
   rowwise() %>%
   mutate(
@@ -29,15 +29,16 @@ source <- openxlsx::read.xlsx("data-raw/compustat.xlsx") %>%
   distinct(id, .keep_all = TRUE) %>%
   mutate(across(where(is.character), toupper))
 
-matches <- dplyr::inner_join(source, target, by = "isin", suffix = c("_s", "_t")) %>%
+table_matches <- dplyr::inner_join(table_source, table_target, by = "isin", suffix = c("_s", "_t")) %>%
   select(
     id_s, id_t, name_s, name_t, iso3_s, iso3_t, city_s, city_t, address_s, address_t
   ) %>%
-  mutate(match = 1)
+  mutate(match = 1) %>%
+  filter(iso3_s == iso3_t)
 
-target <- select(target, -isin)
-source <- select(source, - isin)
+table_target <- select(table_target, -isin)
+table_source <- select(table_source, - isin)
 
-usethis::use_data(source, overwrite = TRUE)
-usethis::use_data(target, overwrite = TRUE)
-usethis::use_data(matches, overwrite = TRUE)
+usethis::use_data(table_source, overwrite = TRUE)
+usethis::use_data(table_target, overwrite = TRUE)
+usethis::use_data(table_matches, overwrite = TRUE)

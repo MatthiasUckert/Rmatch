@@ -4,14 +4,14 @@
 \alias{standardize_data}
 \title{Title}
 \usage{
-standardize_data(.data, .cols, .op = c("space", "punct", "case", "utf8"))
+standardize_data(.data, .cols, .fun = NULL)
 }
 \arguments{
 \item{.data}{A dataframe}
 
 \item{.cols}{Columns to standardize}
 
-\item{.op}{Operations to perform}
+\item{.fun}{Function for standardization, if NULL standardize_str() is used}
 }
 \value{
 A dataframe
@@ -20,5 +20,5 @@ A dataframe
 Description
 }
 \examples{
-standardize_data(source, c("name", "iso3", "city", "address"))
+standardize_data(table_source, c("name", "iso3", "city", "address"))
 }

@@ -6,20 +6,23 @@
 #' 
 #' @param .data A dataframe
 #' @param .cols Columns to standardize
-#' @param .op Operations to perform
+#' @param .fun Function for standardization, if NULL standardize_str() is used
 #'
 #' @return A dataframe
 #' 
 #' @export
 #' @examples
-#' standardize_data(source, c("name", "iso3", "city", "address"))
-standardize_data <- function(.data, .cols, .op = c("space", "punct", "case", "utf8")) {
-    
+#' standardize_data(table_source, c("name", "iso3", "city", "address"))
+standardize_data <- function(.data, .cols, .fun = NULL) {
   tab_ <- .data
-  for (i in .cols) {
-    tab_[[i]] <- standardize_str(tab_[[i]])
+  if (is.null(.fun)) {
+    f_ <- standardize_str
+  } else {
+    f_ <- .fun
   }
   
+  for (i in .cols) {
+    tab_[[i]] <- f_(tab_[[i]])
+  }
   return(tab_)
-  
 }

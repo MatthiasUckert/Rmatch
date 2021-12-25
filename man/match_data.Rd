@@ -5,21 +5,22 @@
 \title{Title}
 \usage{
 match_data(
-  .s,
-  .t,
+  .source,
+  .target,
   .cols,
   .must_match = NULL,
   .max_match = 10,
   .min_sim = 0.8,
   .method = "osa",
+  .chunk = 1,
   .progress = TRUE
 )
 }
 \arguments{
-\item{.s}{The Source Dataframe.
+\item{.source}{The Source Dataframe.
 Must contain a unique column id and the columns you want to match on}
 
-\item{.t}{The Traget Dataframe.
+\item{.target}{The Traget Dataframe.
 Must contain a unique column id and the columns you want to match on}
 
 \item{.cols}{The column names to match as character vector}
@@ -32,16 +33,27 @@ Must contain a unique column id and the columns you want to match on}
 
 \item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"}
 
+\item{.chunk}{Chunk your data}
+
 \item{.progress}{Should a progress bar be shown?
 See stringdist package}
 }
 \value{
-A Dataframe
+A dataframe
 }
 \description{
 Description
 }
 \examples{
-library(Rmatch)
-match_data(source, target, c("name", "iso3", "city"), .min_sim = 0, .must_match = "iso3")
+match_data(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols = c("name", "iso3", "city"),
+  .min_sim = .2,
+  .max_match = 10,
+  .must_match = "iso3",
+  .chunk = 5, 
+  .method = "osa", 
+  .progress = TRUE
+)
 }

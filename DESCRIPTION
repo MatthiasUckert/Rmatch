@@ -10,7 +10,6 @@ Depends:
 Imports: 
     carrier,
     crayon,
-    diffmatchpatch,
     dplyr,
     furrr,
     future,
@@ -26,8 +25,13 @@ Imports:
     tidyr,
     utils
 Suggests: 
+    bench,
+    digest,
+    kableExtra,
     knitr,
-    rmarkdown
+    RFgen,
+    rmarkdown,
+    tidyverse
 VignetteBuilder: 
     knitr
 Encoding: UTF-8
