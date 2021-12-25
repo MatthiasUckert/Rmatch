@@ -53,8 +53,22 @@ extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .worker
     dplyr::mutate(
       !!dplyr::sym(paste0(.col, "_adj")) := trimws(
         stringi::stri_replace_last_fixed(name, legal_form_orig, "")
-        ),
+      ),
       .after = !!dplyr::sym(.col)
+    ) %>%
+    dplyr::mutate(
+      !!dplyr::sym(paste0(.col, "_adj")) := dplyr::if_else(
+        condition = is.na(!!dplyr::sym(paste0(.col, "_adj"))),
+        true = !!dplyr::sym(.col), 
+        false = !!dplyr::sym(paste0(.col, "_adj"))
+        )) %>%
+    dplyr::mutate(
+      !!dplyr::sym(paste0(.col, "_std")) := dplyr::if_else(
+        condition = !is.na(legal_form),
+        true = paste(!!dplyr::sym(paste0(.col, "_adj")), legal_form),
+        false = !!dplyr::sym(paste0(.col, "_adj"))
+      ),
+      .after = !!dplyr::sym(paste0(.col, "_adj"))
     ) %>%
     dplyr::select(-legal_form_orig, -tmp)
   

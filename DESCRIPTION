@@ -29,6 +29,7 @@ Suggests:
     digest,
     kableExtra,
     knitr,
+    printr,
     RFgen,
     rmarkdown,
     tidyverse
