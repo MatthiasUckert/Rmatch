@@ -25,12 +25,9 @@ Imports:
     tidyr,
     utils
 Suggests: 
-    bench,
-    digest,
     kableExtra,
     knitr,
     printr,
-    RFgen,
     rmarkdown,
     tidyverse
 VignetteBuilder: 

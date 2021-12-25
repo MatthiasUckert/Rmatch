@@ -13,13 +13,6 @@ editor_options:
 library(testthat); library(tidyverse); library(stringi); library(fst)
 ```
 
-```{=html}
-<!--
- You need to run the 'description' chunk in the '0-dev_history.Rmd' file before continuing your code there.
-
-If it is the first time you use {fusen}, after 'description', you can directly run the last chunk of the present file with inflate() inside.
--->
-```
 ```{r development-2}
 pkgload::load_all(path = here::here(), export_all = FALSE)
 ```
