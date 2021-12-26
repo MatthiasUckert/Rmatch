@@ -35,8 +35,8 @@ check_dup <- function(.source, .target) {
   cols_s_ <- cols_s_[!cols_s_ == "id"]
   cols_t_ <- cols_t_[!cols_t_ == "id"]
   cols_t_ <- cols_t_[order(match(cols_t_,cols_s_))]
-  s_ <- tibble::as.tibble(.source)
-  t_ <- tibble::as.tibble(.target)
+  s_ <- tibble::as_tibble(.source)
+  t_ <- tibble::as_tibble(.target)
 
   
 
