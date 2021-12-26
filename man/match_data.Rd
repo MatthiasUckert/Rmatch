@@ -20,7 +20,7 @@ match_data(
 \item{.source}{The Source Dataframe.
 Must contain a unique column id and the columns you want to match on}
 
-\item{.target}{The Traget Dataframe.
+\item{.target}{The Target Dataframe.
 Must contain a unique column id and the columns you want to match on}
 
 \item{.cols}{The column names to match as character vector}

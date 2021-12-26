@@ -8,7 +8,7 @@
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
 #' The column names to match as character vector
@@ -72,8 +72,6 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
         t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
 
         for (i in 2:length(.cols)) {
-          a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-
           tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
         }
       }

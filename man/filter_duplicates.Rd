@@ -2,14 +2,14 @@
 % Please edit documentation in R/filter_duplicates.R
 \name{filter_duplicates}
 \alias{filter_duplicates}
-\title{Title}
+\title{Filter duplicate values}
 \usage{
 filter_duplicates(.data, ...)
 }
 \arguments{
 \item{.data}{A dataframe}
 
-\item{...}{Any number of columns to check}
+\item{...}{Columns on which the dataframe should be unique}
 }
 \value{
 A dataframe
@@ -18,5 +18,5 @@ A dataframe
 Description
 }
 \examples{
-# filter_duplicates()
+filter_duplicates(table_source, name)
 }

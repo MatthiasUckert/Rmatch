@@ -9,10 +9,10 @@ Depends:
     R (>= 2.10)
 Imports: 
     carrier,
-    crayon,
     dplyr,
     furrr,
     future,
+    kableExtra,
     magrittr,
     progress,
     purrr,
@@ -25,7 +25,6 @@ Imports:
     tidyr,
     utils
 Suggests: 
-    kableExtra,
     knitr,
     printr,
     rmarkdown,

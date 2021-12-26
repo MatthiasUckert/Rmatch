@@ -8,7 +8,7 @@
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
 #' The column names to match as character vector

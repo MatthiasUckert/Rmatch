@@ -221,8 +221,8 @@ test_that("extract_legal_form works", {
 
 ## HELP: match_col
 ```{r dev-match_col}
-.source <- table_source[1:100, ]
-.target <- table_target[1:1000, ]
+.source <- bind_rows(table_source[1:100, ], table_source[1:100, ])
+.target <- table_target[1:999, ]
 .col <- "name"
 .method = "osa"
 .max_match = 10
@@ -240,7 +240,7 @@ test_that("extract_legal_form works", {
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .col 
 #' The column name to match as a string
@@ -257,6 +257,7 @@ match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .m
   V1 <- value <- id <- name <- id_t <- sim <- NULL
   
   
+  
   method_ <- match.arg(
     arg = .method,
     choices = c(
@@ -264,6 +265,7 @@ match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .m
       "jaccard", "jw", "soundex"
     )
   )
+  
   tab_ <- stringdist::stringsimmatrix(
     a = .source[[.col]],
     b = .target[[.col]],
@@ -306,7 +308,7 @@ test_that("match_col works", {
 
 ## HELP: help_match_data
 ```{r dev-help_match_data}
-.source = table_source[1:100, ]
+.source = bind_rows(table_source[1:100, ], table_source[1:100, ])
 .target = table_target[1:999, ]
 .cols = c("name", "iso3", "city", "address")
 .method = "osa"
@@ -326,7 +328,7 @@ test_that("match_col works", {
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
 #' The column names to match as character vector
@@ -378,8 +380,6 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
         t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
 
         for (i in 2:length(.cols)) {
-          a <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
-
           tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
         }
       }
@@ -413,6 +413,78 @@ test_that("match_data works", {
 })
 ```
 
+## MAIN: join_data
+### Function
+```{r dev-join_data}
+.source = table_source[1:100, ]
+.target = table_target[1:999, ]
+.cols = c("name", "iso3", "city", "address")
+.join <- c("name", "iso3")
+.method = "osa"
+```
+
+```{r function-join_data}
+#' Perform LeftJoin on Data
+#' 
+#' Description
+#' 
+#' @param .source 
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .target 
+#' The Target Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .cols 
+#' The column names to match as character vector
+#' @param .join
+#' Columns to match on
+#' @param .method 
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' @return A Dataframe
+#' 
+#' @export
+join_data <- function(.source, .target, .cols, .join, .method = "osa") {
+  id_s <- id_t <- NULL
+  s_ <- .source[, c("id", .join)]
+  t_ <- .target[, c("id", .join)]
+  non_ <- .cols[!.cols %in% .join]
+
+  tab_ <- dplyr::inner_join(s_, t_, by = .join, suffix = c("_s", "_t")) %>%
+    dplyr::mutate(
+      dplyr::across(!dplyr::matches("^id_s$|^id_t$"), ~1)
+    ) %>%
+    dplyr::select(id_s, id_t, dplyr::everything()) %>%
+    `colnames<-`(c("id_s", "id_t", paste0("sim_", .join)))
+
+  s_ <- dplyr::left_join(tab_, .source[, c("id", non_)], by = c("id_s" = "id"))
+  t_ <- dplyr::left_join(tab_, .target[, c("id", non_)], by = c("id_t" = "id"))
+
+  for (i in seq_len(length(non_))) {
+    tab_[[paste0("sim_", non_[i])]] <- stringdist::stringsim(s_[[non_[i]]], t_[[non_[i]]], .method)
+  }
+  
+  return(tab_)
+}
+```
+
+### Example/Test
+```{r example-join_data}
+join_data(
+  .source = table_source,
+  .target = table_target,
+  .cols = c("name", "iso3", "city", "address"),
+  .join = c("name", "iso3"),
+  .method = "osa"
+)
+```
+  
+```{r tests-join_data}
+test_that("join_data works", {
+  expect_true(inherits(join_data, "function")) 
+})
+```
+  
+
 ## MAIN: match_data
 ```{r dev-match_data}
 .source = table_source[1:100, ]
@@ -436,7 +508,7 @@ test_that("match_data works", {
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
 #' The column names to match as character vector
@@ -696,7 +768,7 @@ tab_match <- match_data(
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .col score column generated by scores_data()
 #'
@@ -761,6 +833,9 @@ You're one inflate from paper to box. Build your package from this very Rmd usin
 ```{r development-inflate, eval=FALSE}
 fusen::inflate(
   flat_file = "dev/flat_full.Rmd", 
-  vignette_name = NA, overwrite = "ask"
+  vignette_name = NA, 
+  overwrite = TRUE,
+  check = FALSE
   )
+devtools::check(vignettes = FALSE)
 ```

@@ -8,7 +8,7 @@
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target 
-#' The Traget Dataframe. 
+#' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .col 
 #' The column name to match as a string
@@ -35,6 +35,7 @@ match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .m
   V1 <- value <- id <- name <- id_t <- sim <- NULL
   
   
+  
   method_ <- match.arg(
     arg = .method,
     choices = c(
@@ -42,6 +43,7 @@ match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .m
       "jaccard", "jw", "soundex"
     )
   )
+  
   tab_ <- stringdist::stringsimmatrix(
     a = .source[[.col]],
     b = .target[[.col]],

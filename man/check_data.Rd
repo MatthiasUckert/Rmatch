@@ -2,16 +2,18 @@
 % Please edit documentation in R/check_data.R
 \name{check_data}
 \alias{check_data}
-\title{Title}
+\title{Check Source and Target Dataframe}
 \usage{
-check_data(.source, .target)
+check_data(.source, .target, .html = TRUE)
 }
 \arguments{
 \item{.source}{The Source Dataframe.
 Must contain a unique column id and the columns you want to match on}
 
-\item{.target}{The Traget Dataframe.
+\item{.target}{The Target Dataframe.
 Must contain a unique column id and the columns you want to match on}
+
+\item{.html}{Output Check as hatml table?}
 }
 \value{
 Messages

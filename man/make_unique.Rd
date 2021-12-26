@@ -2,16 +2,17 @@
 % Please edit documentation in R/make_unique.R
 \name{make_unique}
 \alias{make_unique}
-\title{Title}
+\title{Make Dataframe Unique}
 \usage{
 make_unique(.data, ..., .rem = c("all", "last"))
 }
 \arguments{
 \item{.data}{A dataframe}
 
-\item{...}{Any number of columns to check}
+\item{...}{Columns on which the dataframe should be unique}
 
-\item{.rem}{All or Last}
+\item{.rem}{"all": All duplicates are removed (also the first non-duplicated entry)\cr
+"last": Only subsequent duplicates are removed (first value remains)}
 }
 \value{
 A dataframe
@@ -20,5 +21,5 @@ A dataframe
 Description
 }
 \examples{
-# make_unique()
+make_unique(table_source, name)
 }
