@@ -15,6 +15,8 @@
 #' uniqueness_data(table_source[1:100, ], c("name", "iso3", "city", "address"), "source")
 uniqueness_data <- function(.data, .cols, .type = c("source", "target")) {
   id <- tmp <- NULL
+  .dat <- tibble::as_tibble(.data)
+  
   type_ <- match.arg(.type, c("source", "target"))
   type_ <- substr(type_, 1, 1)
   tab_ <- .data[, c("id", .cols)] %>%

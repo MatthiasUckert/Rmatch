@@ -33,6 +33,9 @@
 #' )
 match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
   V1 <- value <- id <- name <- id_t <- sim <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   
   check_id(.source, .target)
   

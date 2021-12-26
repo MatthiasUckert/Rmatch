@@ -35,6 +35,9 @@ pkgload::load_all(export_all = FALSE)
 check_dup <- function(.source, .target, .check = c("source", "all")) {
   check_ <- match.arg(.check, c("source", "all"))
   
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
   cols_s_ <- cols_s_[!cols_s_ == "id"]
@@ -102,6 +105,9 @@ test_that("check_dup works", {
 check_nas <- function(.source, .target, .check = c("source", "all")) {
   check_ <- match.arg(.check, c("source", "all"))
   
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
 
@@ -153,6 +159,9 @@ check_id <- function(.source, .target, .error = TRUE) {
   cols_s_ <- colnames(.source)
   cols_t_ <- colnames(.target)
 
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   es_ <- "id" %in% cols_s_
   et_ <- "id" %in% cols_t_
 
@@ -229,6 +238,9 @@ test_that("check_id works", {
 check_data <- function(.source, .target, .check = c("source", "all"), .html = TRUE) {
   name <- df <- check <- ind <- cum <- value <- s <- Matrix <- Source <-
     Target <- NULL
+  
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
   
   check_ <- match.arg(.check, c("source", "all"))
   
@@ -339,6 +351,8 @@ test_that("check_data works", {
 #' @export
 filter_duplicates <- function(.data, ...) {
   tmp_ <- NULL
+  .data <- tibble::as_tibble(.data)
+  
   vars_ <- dplyr::enquos(...)
   tibble::as_tibble(.data) %>%
     dplyr::mutate(tmp_ = paste0(!!!vars_)) %>%
@@ -377,6 +391,9 @@ test_that("filter_duplicates works", {
 make_unique <- function(.data, ..., .rem = c("all", "last")) {
   rem_ <- match.arg(.rem, c("all", "last"))
   tmp_ <- NULL
+  
+  .data <- tibble::as_tibble(.data)
+  
   vars_ <- dplyr::enquos(...)
   tab_ <- tibble::as_tibble(.data) %>%
     dplyr::mutate(tmp_ = paste0(!!!vars_))

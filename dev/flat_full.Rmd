@@ -99,7 +99,7 @@ test_that("standardize_str works", {
 #' 
 #' @export
 standardize_data <- function(.data, .cols, .fun = NULL) {
-  tab_ <- .data
+  tab_ <- tibble::as_tibble(.data)
   if (is.null(.fun)) {
     f_ <- standardize_str
   } else {
@@ -150,6 +150,8 @@ test_that("standardize_data works", {
 #' @export
 extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
   tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
+  
+  .data <- tibble::as_tibble(.data)
   
   if (nrow(.legal_forms) == 0) {
     tab_lf_ <- get("legal_form_all")
@@ -255,6 +257,9 @@ test_that("extract_legal_form works", {
 #' @return A Dataframe
 match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
   V1 <- value <- id <- name <- id_t <- sim <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   
   check_id(.source, .target)
   
@@ -347,6 +352,8 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
                        .min_sim = .8, .method = "osa", .progress = TRUE) {
   
   sim <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
   
   check_id(.source, .target)
   
@@ -447,6 +454,8 @@ test_that("match_data works", {
 #' @export
 join_data <- function(.source, .target, .cols, .join, .method = "osa") {
   id_s <- id_t <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
   
   check_id(.source, .target)
   
@@ -537,6 +546,9 @@ test_that("join_data works", {
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
                        .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
   id <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   
   check_id(.source, .target)
   
@@ -663,6 +675,8 @@ test_that("uniqueness_vec works", {
 #' @export
 uniqueness_data <- function(.data, .cols, .type = c("source", "target")) {
   id <- tmp <- NULL
+  .dat <- tibble::as_tibble(.data)
+  
   type_ <- match.arg(.type, c("source", "target"))
   type_ <- substr(type_, 1, 1)
   tab_ <- .data[, c("id", .cols)] %>%
@@ -715,7 +729,7 @@ test_that("uniqueness_data works", {
 #' @export
 scores_data <- function(.data, .weights = NULL, .training = NULL) {
   id_s <- id_t <- NULL
-  tab_ <- .data
+  tab_ <- tibble::as_tibble(.data)
   cols_ <- colnames(tab_)
   cols_ <- cols_[grepl("^sim_|^uni_", cols_)]
   mat_ <- as.matrix(tab_[, cols_])
@@ -800,6 +814,10 @@ tab_match <- match_data(
 #' @export
 dedup_data <- function(.score, .source, .target, .col) {
   id_s <- id_t <- name_s <- name_t <- NULL
+  .score  <- tibble::as_tibble(.score)
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   
   col_s_ <- colnames(.source)
   col_t_ <- colnames(.target)

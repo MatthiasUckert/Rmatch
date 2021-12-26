@@ -29,6 +29,8 @@
 #' )
 join_data <- function(.source, .target, .cols, .join, .method = "osa") {
   id_s <- id_t <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
   
   check_id(.source, .target)
   

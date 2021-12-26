@@ -24,7 +24,7 @@
 #' tab_score <- scores_data(tab_match)
 scores_data <- function(.data, .weights = NULL, .training = NULL) {
   id_s <- id_t <- NULL
-  tab_ <- .data
+  tab_ <- tibble::as_tibble(.data)
   cols_ <- colnames(tab_)
   cols_ <- cols_[grepl("^sim_|^uni_", cols_)]
   mat_ <- as.matrix(tab_[, cols_])

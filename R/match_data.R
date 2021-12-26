@@ -43,6 +43,9 @@
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
                        .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
   id <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   
   check_id(.source, .target)
   

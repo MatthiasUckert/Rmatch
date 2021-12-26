@@ -39,6 +39,8 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
                        .min_sim = .8, .method = "osa", .progress = TRUE) {
   
   sim <- NULL
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
   
   check_id(.source, .target)
   

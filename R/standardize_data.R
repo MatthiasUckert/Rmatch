@@ -14,7 +14,7 @@
 #' @examples
 #' standardize_data(table_source, c("name", "iso3", "city", "address"))
 standardize_data <- function(.data, .cols, .fun = NULL) {
-  tab_ <- .data
+  tab_ <- tibble::as_tibble(.data)
   if (is.null(.fun)) {
     f_ <- standardize_str
   } else {
