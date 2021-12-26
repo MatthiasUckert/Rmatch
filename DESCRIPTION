@@ -16,14 +16,14 @@ Imports:
     magrittr,
     progress,
     purrr,
+    Rfast,
     rlang,
     scales,
     stats,
     stringdist,
     stringi,
     tibble,
-    tidyr,
-    utils
+    tidyr
 Suggests: 
     knitr,
     printr,

@@ -5,18 +5,27 @@
 #' Description
 #' 
 #' @param .vec A character vector
+#' @param .normalize Normalize between 0 and 1
 #'
 #' @return A numeric vector
 #' 
 #' @noRd
 #' @examples
-#' uniqueness_vec(table_source[["name"]][1:10])
-uniqueness_vec <- function(.vec) {
-  l1_ <- stringi::stri_split_fixed(.vec, " ")
-  v1_ <- unlist(l1_)
-  v2_ <- as.integer(stats::ave(v1_, v1_, FUN = length))
-  l2_ <- utils::relist(v2_, l1_)
-  v3_ <- purrr::map_int(l2_, ~ sum(.x, na.rm = TRUE))
+#' uniqueness_vec(table_source[["name"]][1:10], TRUE)
+uniqueness_vec <- function(.vec, .normalize = FALSE) {
+  value <- name <- n <- NULL
   
-  1 - (v3_ / max(v3_))
+  l1_ <- stringi::stri_extract_all_regex(.vec, ".")
+  mat_ <- tibble::enframe(l1_) %>%
+    tidyr::unnest(value) %>%
+    dplyr::count(name, value) %>%
+    tidyr::pivot_wider(names_from = value, values_from = n, values_fill = 0) %>%
+    dplyr::select(-name) %>%
+    as.matrix()
+  man_ <- Rfast::Dist(mat_, method = "manhattan")
+  if (.normalize) {
+    man_ <- man_ / max(man_)
+  }
+  
+  rowMeans(man_)
 }

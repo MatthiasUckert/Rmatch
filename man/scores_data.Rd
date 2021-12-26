@@ -4,14 +4,20 @@
 \alias{scores_data}
 \title{Score Data}
 \usage{
-scores_data(.data, .weights = NULL, .training = NULL)
+scores_data(.matches, .source, .target, .must_match = NULL, .weights = NULL)
 }
 \arguments{
-\item{.data}{A dataframe}
+\item{.matches}{Dataframe produced by match_data()}
+
+\item{.source}{The Source Dataframe.
+Must contain a unique column id and the columns you want to match on}
+
+\item{.target}{The Target Dataframe.
+Must contain a unique column id and the columns you want to match on}
+
+\item{.must_match}{Columns that must be matched perfectly}
 
 \item{.weights}{Custom weights}
-
-\item{.training}{A training dataset (not implemented yet)}
 }
 \value{
 A dataframe
@@ -21,13 +27,13 @@ Description
 }
 \examples{
 tab_match <- match_data(
-  .source = table_source[1:100, ],
-  .target = table_target[1:999, ],
+  .source = table_source,
+  .target = table_target,
   .cols = c("name", "iso3", "city"),
   .min_sim = .2,
   .max_match = 10,
   .method = "osa", 
   .progress = TRUE
 )
-tab_score <- scores_data(tab_match)
+tab_score <- scores_data(tab_match, table_source, table_target)
 }

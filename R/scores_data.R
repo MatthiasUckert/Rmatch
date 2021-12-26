@@ -4,55 +4,80 @@
 #' 
 #' Description
 #' 
-#' @param .data A dataframe
+#' @param .matches Dataframe produced by match_data()
+#' @param .source 
+#' The Source Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .target 
+#' The Target Dataframe. 
+#' Must contain a unique column id and the columns you want to match on
+#' @param .must_match Columns that must be matched perfectly
 #' @param .weights Custom weights
-#' @param .training A training dataset (not implemented yet)
 #'
 #' @return A dataframe
 #' 
 #' @export
 #' @examples
 #' tab_match <- match_data(
-#'   .source = table_source[1:100, ],
-#'   .target = table_target[1:999, ],
+#'   .source = table_source,
+#'   .target = table_target,
 #'   .cols = c("name", "iso3", "city"),
 #'   .min_sim = .2,
 #'   .max_match = 10,
 #'   .method = "osa", 
 #'   .progress = TRUE
 #' )
-#' tab_score <- scores_data(tab_match)
-scores_data <- function(.data, .weights = NULL, .training = NULL) {
-  id_s <- id_t <- NULL
-  tab_ <- tibble::as_tibble(.data)
-  cols_ <- colnames(tab_)
-  cols_ <- cols_[grepl("^sim_|^uni_", cols_)]
-  mat_ <- as.matrix(tab_[, cols_])
+#' tab_score <- scores_data(tab_match, table_source, table_target)
+scores_data <- function(.matches, .source, .target, .must_match = NULL, .weights = NULL) {
+  id_s <- id_t <- . <- NULL
+  
+  cols_ <- colnames(.matches)
+  cols_ <- cols_[grepl("^sim_", cols_)]
+  cols_ <- cols_[!cols_ == paste0("sim_", .must_match)]
   
   if (!is.null(.weights)) {
-    if (length(.weights) != length(cols_)) {
-      stop("Weights must have the same length as columns to weigh", call. = FALSE)
+    names_ <- names(.weights)
+    if (length(names_) == 0) {
+      stop(".weights must be a named vector")
     }
-    
-    weights_ <- .weights / sum(.weights)
-    
-    mat_ <- mat_ * weights_
-    tab_ %>%
-      dplyr::select(id_s, id_t) %>%
-      dplyr::mutate(
-        score_mean = rowMeans(mat_, na.rm = TRUE),
-        score_square = rowMeans(mat_^2, na.rm = TRUE)
-      )
+    if (!length(names_) == length(cols_)) {
+      stop(".weights must have the same length as .cols w/o .must_match")
+    }
+
+    if (!all(sort(names_) == gsub("sim_", "", sort(cols_)))) {
+      stop(".weights must have the same names as .cols w/o .must_match")
+    }
+
+    wc_ <- .weights[order(match(names(.weights), gsub("sim_", "", cols_)))]
+    wc_ <- wc_ / sum(wc_)
   } else {
-    tab_ %>%
-      dplyr::select(id_s, id_t) %>%
-      dplyr::mutate(
-        score_mean = rowMeans(mat_, na.rm = TRUE),
-        score_square = rowMeans(mat_^2, na.rm = TRUE)
-      )
+    wc_ <- rep(NA_real_, length(cols_))
   }
   
+  .matches <- tibble::as_tibble(.matches)
+  .source  <- tibble::as_tibble(.source)
+  .target  <- tibble::as_tibble(.target)
   
+  ws_ <- purrr::map_dbl(
+    .x = gsub("sim_", "",cols_), 
+    .f = ~ mean(uniqueness_vec(.source[[.x]]))
+    ) %>% `/`(sum(.))
+
+  wt_ <- purrr::map_dbl(
+    .x = gsub("sim_", "", cols_),
+    .f = ~ mean(uniqueness_vec(.target[[.x]]))
+  ) %>% `/`(sum(.))
 
   
+  wa_ <- (ws_ + wt_) / 2
+  
+  mat_ <- as.matrix(.matches[, cols_])
+  
+  .matches %>%
+    dplyr::select(id_s, id_t) %>%
+    dplyr::mutate(
+      simple_mean = rowMeans(mat_, na.rm = TRUE),
+      weight_mean = rowSums(mat_ * wa_, na.rm = TRUE),
+      custom_mean = rowSums(mat_ * wc_, na.rm = TRUE)
+    )
 }

@@ -28,8 +28,14 @@
 #'   .method = "osa", 
 #'   .progress = TRUE
 #' )
-#' tab_score <- scores_data(tab_match)
-#' dedup_data(tab_score, tab_source, tab_target, "score_mean")
+#' tab_score <- scores_data(
+#'   .matches = tab_match, 
+#'   .source = table_source, 
+#'   .target = table_target, 
+#'   .must_match = "iso3"
+#'   )
+#' 
+#' dedup_data(tab_score, tab_source, tab_target, "weight_mean")
 dedup_data <- function(.score, .source, .target, .col) {
   id_s <- id_t <- name_s <- name_t <- NULL
   .score  <- tibble::as_tibble(.score)
