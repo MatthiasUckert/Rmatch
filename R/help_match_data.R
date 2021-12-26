@@ -36,7 +36,7 @@
 #'   .progress = TRUE
 #'   )
 help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10, 
-                       .min_sim = .8, .method = "osa", .progress = TRUE) {
+                       .min_sim = .2, .method = "osa", .progress = TRUE) {
   
   sim <- NULL
   .source <- tibble::as_tibble(.source)

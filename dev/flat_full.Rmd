@@ -255,7 +255,7 @@ test_that("extract_legal_form works", {
 #' See stringdist package
 #'
 #' @return A Dataframe
-match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .8, .method = "osa") {
+match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .2, .method = "osa") {
   V1 <- value <- id <- name <- id_t <- sim <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
@@ -349,7 +349,7 @@ test_that("match_col works", {
 #' @return A Dataframe
 #' 
 help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10, 
-                       .min_sim = .8, .method = "osa", .progress = TRUE) {
+                       .min_sim = .2, .method = "osa", .progress = TRUE) {
   
   sim <- NULL
   .source <- tibble::as_tibble(.source)
@@ -544,7 +544,7 @@ test_that("join_data works", {
 #' 
 #' @export
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
-                       .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
+                       .min_sim = .2, .method = "osa", .chunk = 1, .progress = TRUE) {
   id <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
@@ -590,7 +590,9 @@ match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL
     }
   )
 
-  dplyr::bind_rows(tab0_, tab1_)
+  out_ <- dplyr::bind_rows(tab0_, tab1_)
+  out_ <- out_[, c("id_s", "id_t", paste0("sim_", .cols))]
+  
 }
 ```
 
@@ -603,7 +605,6 @@ match_data(
   .min_sim = .2,
   .max_match = 10,
   .must_match = "iso3",
-  .chunk = 5, 
   .method = "osa", 
   .progress = TRUE
 )
@@ -722,7 +723,7 @@ test_that("uniqueness_data works", {
 #' 
 #' @param .data A dataframe
 #' @param .weights Custom weights
-#' @param .training A training dataset
+#' @param .training A training dataset (not implemented yet)
 #'
 #' @return A dataframe
 #' 
@@ -735,12 +736,18 @@ scores_data <- function(.data, .weights = NULL, .training = NULL) {
   mat_ <- as.matrix(tab_[, cols_])
   
   if (!is.null(.weights)) {
-    mat_ <- mat_ * .weights
+    if (length(.weights) != length(cols_)) {
+      stop("Weights must have the same length as columns to weigh", call. = FALSE)
+    }
+    
+    weights_ <- .weights / sum(.weights)
+    
+    mat_ <- mat_ * weights_
     tab_ %>%
       dplyr::select(id_s, id_t) %>%
       dplyr::mutate(
-        score_mean = rowSums(mat_, na.rm = TRUE),
-        score_square = rowSums(mat_^2, na.rm = TRUE)
+        score_mean = rowMeans(mat_, na.rm = TRUE),
+        score_square = rowMeans(mat_^2, na.rm = TRUE)
       )
   } else {
     tab_ %>%

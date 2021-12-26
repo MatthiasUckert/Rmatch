@@ -11,7 +11,7 @@ match_data(
   .join = NULL,
   .must_match = NULL,
   .max_match = 10,
-  .min_sim = 0.8,
+  .min_sim = 0.2,
   .method = "osa",
   .chunk = 1,
   .progress = TRUE
@@ -55,7 +55,6 @@ match_data(
   .min_sim = .2,
   .max_match = 10,
   .must_match = "iso3",
-  .chunk = 5, 
   .method = "osa", 
   .progress = TRUE
 )

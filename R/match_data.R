@@ -36,12 +36,11 @@
 #'   .min_sim = .2,
 #'   .max_match = 10,
 #'   .must_match = "iso3",
-#'   .chunk = 5, 
 #'   .method = "osa", 
 #'   .progress = TRUE
 #' )
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
-                       .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
+                       .min_sim = .2, .method = "osa", .chunk = 1, .progress = TRUE) {
   id <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
@@ -87,5 +86,7 @@ match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL
     }
   )
 
-  dplyr::bind_rows(tab0_, tab1_)
+  out_ <- dplyr::bind_rows(tab0_, tab1_)
+  out_ <- out_[, c("id_s", "id_t", paste0("sim_", .cols))]
+  
 }

@@ -11,7 +11,7 @@ scores_data(.data, .weights = NULL, .training = NULL)
 
 \item{.weights}{Custom weights}
 
-\item{.training}{A training dataset}
+\item{.training}{A training dataset (not implemented yet)}
 }
 \value{
 A dataframe

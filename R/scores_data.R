@@ -6,7 +6,7 @@
 #' 
 #' @param .data A dataframe
 #' @param .weights Custom weights
-#' @param .training A training dataset
+#' @param .training A training dataset (not implemented yet)
 #'
 #' @return A dataframe
 #' 
@@ -30,12 +30,18 @@ scores_data <- function(.data, .weights = NULL, .training = NULL) {
   mat_ <- as.matrix(tab_[, cols_])
   
   if (!is.null(.weights)) {
-    mat_ <- mat_ * .weights
+    if (length(.weights) != length(cols_)) {
+      stop("Weights must have the same length as columns to weigh", call. = FALSE)
+    }
+    
+    weights_ <- .weights / sum(.weights)
+    
+    mat_ <- mat_ * weights_
     tab_ %>%
       dplyr::select(id_s, id_t) %>%
       dplyr::mutate(
-        score_mean = rowSums(mat_, na.rm = TRUE),
-        score_square = rowSums(mat_^2, na.rm = TRUE)
+        score_mean = rowMeans(mat_, na.rm = TRUE),
+        score_square = rowMeans(mat_^2, na.rm = TRUE)
       )
   } else {
     tab_ %>%
