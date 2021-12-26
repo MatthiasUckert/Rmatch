@@ -4,7 +4,7 @@
 \alias{check_data}
 \title{Check Source and Target Dataframe}
 \usage{
-check_data(.source, .target, .html = TRUE)
+check_data(.source, .target, .check = c("source", "all"), .html = TRUE)
 }
 \arguments{
 \item{.source}{The Source Dataframe.
@@ -12,6 +12,8 @@ Must contain a unique column id and the columns you want to match on}
 
 \item{.target}{The Target Dataframe.
 Must contain a unique column id and the columns you want to match on}
+
+\item{.check}{Check only column that are also in source, or all columns}
 
 \item{.html}{Output Check as hatml table?}
 }

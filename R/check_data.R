@@ -10,6 +10,8 @@
 #' @param .target
 #' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
+#' @param .check 
+#' Check only column that are also in source, or all columns
 #' @param .html
 #' Output Check as hatml table?
 #' @return Messages
@@ -17,10 +19,14 @@
 #' @export
 #' @examples
 #' check_data(table_source, table_target)
-check_data <- function(.source, .target, .html = TRUE) {
+check_data <- function(.source, .target, .check = c("source", "all"), .html = TRUE) {
   name <- df <- check <- ind <- cum <- value <- s <- Matrix <- Source <-
     Target <- NULL
+  
+  check_ <- match.arg(.check, c("source", "all"))
+  
   lst_ids_ <- check_id(.source, .target, .error = FALSE)
+  
   tab_ids_ <- tibble::enframe(lst_ids_) %>%
     tidyr::separate(name, c("check", "df"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
@@ -29,7 +35,7 @@ check_data <- function(.source, .target, .html = TRUE) {
     ) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
-  lst_nas_ <- check_nas(.source, .target)
+  lst_nas_ <- check_nas(.source, .target, .check = check_)
   tab_nas_ <- tibble::enframe(lst_nas_) %>%
     tidyr::separate(name, c("df", "check"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
@@ -39,7 +45,7 @@ check_data <- function(.source, .target, .html = TRUE) {
     ) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
-  lst_dup_ <- check_dup(.source, .target)
+  lst_dup_ <- check_dup(.source, .target, .check = check_)
   tab_ind_ <- tibble::enframe(lst_dup_$ind, value = "ind")
   tab_cum_ <- tibble::enframe(lst_dup_$cum, value = "cum")
   tab_dup_ <- dplyr::left_join(tab_ind_, tab_cum_, by = "name") %>%

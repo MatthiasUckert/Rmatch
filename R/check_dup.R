@@ -3,25 +3,35 @@
 #' Check Duplicates
 #' 
 #' Description
+#'
 #' @param .source
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Target Dataframe.
+#' Must contain a unique column id and the columns you want to match on 
+#' @param .check 
+#' Check only column that are also in source, or all columns
 #' @return A list with duplicates
 #' 
 #' @noRd
 #' @examples
 #' check_dup(table_source, table_target)
-check_dup <- function(.source, .target) {
+check_dup <- function(.source, .target, .check = c("source", "all")) {
+  check_ <- match.arg(.check, c("source", "all"))
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
   cols_s_ <- cols_s_[!cols_s_ == "id"]
   cols_t_ <- cols_t_[!cols_t_ == "id"]
   cols_t_ <- cols_t_[order(match(cols_t_,cols_s_))]
-  s_ <- tibble::as.tibble(.source)
-  t_ <- tibble::as.tibble(.target)
+  
+  if (check_ == "source") {
+    cols_t_ <- cols_t_[cols_t_ %in% cols_s_]
+  }
+  
+  s_ <- tibble::as_tibble(.source)
+  t_ <- tibble::as_tibble(.target)
 
   
 

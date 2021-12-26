@@ -20,21 +20,31 @@ pkgload::load_all(export_all = FALSE)
 #' Check Duplicates
 #' 
 #' Description
+#'
 #' @param .source
 #' The Source Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .target
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Target Dataframe.
+#' Must contain a unique column id and the columns you want to match on 
+#' @param .check 
+#' Check only column that are also in source, or all columns
 #' @return A list with duplicates
 #' 
 #' @noRd
-check_dup <- function(.source, .target) {
+check_dup <- function(.source, .target, .check = c("source", "all")) {
+  check_ <- match.arg(.check, c("source", "all"))
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
   cols_s_ <- cols_s_[!cols_s_ == "id"]
   cols_t_ <- cols_t_[!cols_t_ == "id"]
   cols_t_ <- cols_t_[order(match(cols_t_,cols_s_))]
+  
+  if (check_ == "source") {
+    cols_t_ <- cols_t_[cols_t_ %in% cols_s_]
+  }
+  
   s_ <- tibble::as_tibble(.source)
   t_ <- tibble::as_tibble(.target)
 
@@ -84,14 +94,22 @@ test_that("check_dup works", {
 #' @param .target
 #' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' 
+#' @param .check 
+#' Check only column that are also in source, or all columns
 #' @return A list with the number of NAs
 #' 
 #' @noRd
-check_nas <- function(.source, .target) {
+check_nas <- function(.source, .target, .check = c("source", "all")) {
+  check_ <- match.arg(.check, c("source", "all"))
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
-  
+
+  if (check_ == "source") {
+    cols_t_ <- cols_t_[cols_t_ %in% cols_s_]
+  }
+
+
   c(
     purrr::map_int(cols_s_, ~ sum(is.na(.source[[.x]]))),
     purrr::map_int(cols_t_, ~ sum(is.na(.target[[.x]])))
@@ -187,8 +205,6 @@ test_that("check_id works", {
 ```{r dev-check_data}
 .source <- table_source
 .target <- table_source
-
-.target <- fst::read_fst("E:/Uckert/R_Projects/RpScrapeDisAction/2_output/02_action_prepare/cpa_data.fst")
 .html = TRUE
 ```
 
@@ -203,15 +219,21 @@ test_that("check_id works", {
 #' @param .target
 #' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
+#' @param .check 
+#' Check only column that are also in source, or all columns
 #' @param .html
 #' Output Check as hatml table?
 #' @return Messages
 #' 
 #' @export
-check_data <- function(.source, .target, .html = TRUE) {
+check_data <- function(.source, .target, .check = c("source", "all"), .html = TRUE) {
   name <- df <- check <- ind <- cum <- value <- s <- Matrix <- Source <-
     Target <- NULL
+  
+  check_ <- match.arg(.check, c("source", "all"))
+  
   lst_ids_ <- check_id(.source, .target, .error = FALSE)
+  
   tab_ids_ <- tibble::enframe(lst_ids_) %>%
     tidyr::separate(name, c("check", "df"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
@@ -220,7 +242,7 @@ check_data <- function(.source, .target, .html = TRUE) {
     ) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
-  lst_nas_ <- check_nas(.source, .target)
+  lst_nas_ <- check_nas(.source, .target, .check = check_)
   tab_nas_ <- tibble::enframe(lst_nas_) %>%
     tidyr::separate(name, c("df", "check"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
@@ -230,7 +252,7 @@ check_data <- function(.source, .target, .html = TRUE) {
     ) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
-  lst_dup_ <- check_dup(.source, .target)
+  lst_dup_ <- check_dup(.source, .target, .check = check_)
   tab_ind_ <- tibble::enframe(lst_dup_$ind, value = "ind")
   tab_cum_ <- tibble::enframe(lst_dup_$cum, value = "cum")
   tab_dup_ <- dplyr::left_join(tab_ind_, tab_cum_, by = "name") %>%

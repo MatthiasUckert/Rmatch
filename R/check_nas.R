@@ -9,16 +9,24 @@
 #' @param .target
 #' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
-#' 
+#' @param .check 
+#' Check only column that are also in source, or all columns
 #' @return A list with the number of NAs
 #' 
 #' @noRd
 #' @examples
 #' check_nas(table_source, table_target)
-check_nas <- function(.source, .target) {
+check_nas <- function(.source, .target, .check = c("source", "all")) {
+  check_ <- match.arg(.check, c("source", "all"))
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
-  
+
+  if (check_ == "source") {
+    cols_t_ <- cols_t_[cols_t_ %in% cols_s_]
+  }
+
+
   c(
     purrr::map_int(cols_s_, ~ sum(is.na(.source[[.x]]))),
     purrr::map_int(cols_t_, ~ sum(is.na(.target[[.x]])))
