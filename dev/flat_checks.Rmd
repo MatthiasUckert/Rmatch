@@ -34,21 +34,25 @@ check_dup <- function(.source, .target) {
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
   cols_s_ <- cols_s_[!cols_s_ == "id"]
   cols_t_ <- cols_t_[!cols_t_ == "id"]
+  cols_t_ <- cols_t_[order(match(cols_t_,cols_s_))]
+  s_ <- tibble::as.tibble(.source)
+  t_ <- tibble::as.tibble(.target)
 
+  
 
   ind_ <- c(
-    purrr::map_int(cols_s_, ~ sum(duplicated(.source[[.x]]))),
-    purrr::map_int(cols_t_, ~ sum(duplicated(.target[[.x]])))
+    purrr::map_int(cols_s_, ~ sum(duplicated(s_[[.x]]))),
+    purrr::map_int(cols_t_, ~ sum(duplicated(t_[[.x]])))
   )
 
   cum_ <- c(
     purrr::map_int(
       .x = stats::setNames(seq_len(length(cols_s_)), names(cols_s_)),
-      .f = ~ sum(duplicated(apply(.source[, cols_s_[1:.x]], 1, paste, collapse = "-")))
+      .f = ~ sum(duplicated(apply(s_[, cols_s_[1:.x]], 1, paste, collapse = "-")))
     ),
     purrr::map_int(
       .x = stats::setNames(seq_len(length(cols_t_)), names(cols_t_)),
-      .f = ~ sum(duplicated(apply(.source[, cols_t_[1:.x]], 1, paste, collapse = "-")))
+      .f = ~ sum(duplicated(apply(t_[, cols_t_[1:.x]], 1, paste, collapse = "-")))
     )
   )
   
@@ -183,6 +187,9 @@ test_that("check_id works", {
 ```{r dev-check_data}
 .source <- table_source
 .target <- table_source
+
+.target <- fst::read_fst("E:/Uckert/R_Projects/RpScrapeDisAction/2_output/02_action_prepare/cpa_data.fst")
+.html = TRUE
 ```
 
 ```{r function-check_data}
@@ -206,7 +213,7 @@ check_data <- function(.source, .target, .html = TRUE) {
     Target <- NULL
   lst_ids_ <- check_id(.source, .target, .error = FALSE)
   tab_ids_ <- tibble::enframe(lst_ids_) %>%
-    tidyr::separate(name, c("check", "df"), sep = "_") %>%
+    tidyr::separate(name, c("check", "df"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
     dplyr::mutate(
       check = dplyr::if_else(check == "e", "Column: 'id' exists", "Column: 'id' is unique")
@@ -215,9 +222,12 @@ check_data <- function(.source, .target, .html = TRUE) {
 
   lst_nas_ <- check_nas(.source, .target)
   tab_nas_ <- tibble::enframe(lst_nas_) %>%
-    tidyr::separate(name, c("df", "check"), sep = "_") %>%
+    tidyr::separate(name, c("df", "check"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
     dplyr::mutate(check = paste0("Check NAs for column: '", check, "'")) %>%
+    dplyr::mutate(
+      dplyr::across(c(s, t), ~ scales::comma(., 1))
+    ) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
   lst_dup_ <- check_dup(.source, .target)
@@ -225,25 +235,29 @@ check_data <- function(.source, .target, .html = TRUE) {
   tab_cum_ <- tibble::enframe(lst_dup_$cum, value = "cum")
   tab_dup_ <- dplyr::left_join(tab_ind_, tab_cum_, by = "name") %>%
     dplyr::mutate(
-      dplyr::across(c(ind, cum), scales::comma),
+      dplyr::across(c(ind, cum), ~ scales::comma(., 1)),
       cum = paste0("(", cum, ")")
     ) %>%
     tidyr::unite(value, ind, cum, sep = " ") %>%
-    tidyr::separate(name, c("df", "check"), sep = "_") %>%
+    tidyr::separate(name, c("df", "check"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
     dplyr::mutate(check = paste0("Check (cumulative) duplicates for column(s): '", check, "'")) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
+  
+  ns_ <- as.numeric(nrow(.source))
+  nt_ <- as.numeric(nrow(.target))
+  
   tab_col_ <- tibble::tibble(
     check = c(
       "Elements in Dataframe/Matrix",
       "Estimated memory allocation"
     ),
-    s = c(nrow(.source), NA_integer_),
-    t = c(nrow(.target), NA_integer_),
-    Matrix = c(nrow(.source) * nrow(.target), nrow(.source) * nrow(.target) * 8 / 1e6 * 20)
+    s = c(ns_, NA_real_),
+    t = c(nt_, NA_real_),
+    Matrix = c(ns_ * nt_, ns_ * nt_ * 8 / 1e6 * 20)
   ) %>%
-    dplyr::mutate(dplyr::across(c(s, t, Matrix), scales::comma)) %>%
+    dplyr::mutate(dplyr::across(c(s, t, Matrix), ~ scales::comma(., 1))) %>%
     dplyr::mutate(Matrix = dplyr::if_else(dplyr::row_number() == 2, paste(Matrix, "MB"), Matrix))
 
 
@@ -262,9 +276,10 @@ check_data <- function(.source, .target, .html = TRUE) {
           .cols = c(Source, Target, Matrix),
           .fns = ~ dplyr::case_when(
             . == "" | is.na(.) ~ "",
-            dplyr::row_number() %in% c(4:8, 15:17) ~ kableExtra::cell_spec(., bold = T),
-            grepl("\\([1-9]+\\)|FALSE", .) ~ kableExtra::cell_spec(., bold = T, color = "red"),
-            !grepl("\\([1-9]+\\)|FALSE", .) ~ kableExtra::cell_spec(., bold = T, color = "green")
+            startsWith(Check, "Check NAs") ~ kableExtra::cell_spec(., bold = T),
+            grepl("\\([1-9]+\\)|\\(.*,.*\\)|FALSE", .) ~ kableExtra::cell_spec(., bold = T, color = "red"),
+            grepl("\\(0\\)|TRUE", .) ~ kableExtra::cell_spec(., bold = T, color = "green"),
+            TRUE ~ .
           )
         )
       ) %>%

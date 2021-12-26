@@ -22,7 +22,7 @@ check_data <- function(.source, .target, .html = TRUE) {
     Target <- NULL
   lst_ids_ <- check_id(.source, .target, .error = FALSE)
   tab_ids_ <- tibble::enframe(lst_ids_) %>%
-    tidyr::separate(name, c("check", "df"), sep = "_") %>%
+    tidyr::separate(name, c("check", "df"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
     dplyr::mutate(
       check = dplyr::if_else(check == "e", "Column: 'id' exists", "Column: 'id' is unique")
@@ -31,9 +31,12 @@ check_data <- function(.source, .target, .html = TRUE) {
 
   lst_nas_ <- check_nas(.source, .target)
   tab_nas_ <- tibble::enframe(lst_nas_) %>%
-    tidyr::separate(name, c("df", "check"), sep = "_") %>%
+    tidyr::separate(name, c("df", "check"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
     dplyr::mutate(check = paste0("Check NAs for column: '", check, "'")) %>%
+    dplyr::mutate(
+      dplyr::across(c(s, t), ~ scales::comma(., 1))
+    ) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
   lst_dup_ <- check_dup(.source, .target)
@@ -41,25 +44,29 @@ check_data <- function(.source, .target, .html = TRUE) {
   tab_cum_ <- tibble::enframe(lst_dup_$cum, value = "cum")
   tab_dup_ <- dplyr::left_join(tab_ind_, tab_cum_, by = "name") %>%
     dplyr::mutate(
-      dplyr::across(c(ind, cum), scales::comma),
+      dplyr::across(c(ind, cum), ~ scales::comma(., 1)),
       cum = paste0("(", cum, ")")
     ) %>%
     tidyr::unite(value, ind, cum, sep = " ") %>%
-    tidyr::separate(name, c("df", "check"), sep = "_") %>%
+    tidyr::separate(name, c("df", "check"), sep = "_", extra = "merge") %>%
     tidyr::pivot_wider(names_from = df) %>%
     dplyr::mutate(check = paste0("Check (cumulative) duplicates for column(s): '", check, "'")) %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
+  
+  ns_ <- as.numeric(nrow(.source))
+  nt_ <- as.numeric(nrow(.target))
+  
   tab_col_ <- tibble::tibble(
     check = c(
       "Elements in Dataframe/Matrix",
       "Estimated memory allocation"
     ),
-    s = c(nrow(.source), NA_integer_),
-    t = c(nrow(.target), NA_integer_),
-    Matrix = c(nrow(.source) * nrow(.target), nrow(.source) * nrow(.target) * 8 / 1e6 * 20)
+    s = c(ns_, NA_real_),
+    t = c(nt_, NA_real_),
+    Matrix = c(ns_ * nt_, ns_ * nt_ * 8 / 1e6 * 20)
   ) %>%
-    dplyr::mutate(dplyr::across(c(s, t, Matrix), scales::comma)) %>%
+    dplyr::mutate(dplyr::across(c(s, t, Matrix), ~ scales::comma(., 1))) %>%
     dplyr::mutate(Matrix = dplyr::if_else(dplyr::row_number() == 2, paste(Matrix, "MB"), Matrix))
 
 
@@ -78,9 +85,10 @@ check_data <- function(.source, .target, .html = TRUE) {
           .cols = c(Source, Target, Matrix),
           .fns = ~ dplyr::case_when(
             . == "" | is.na(.) ~ "",
-            dplyr::row_number() %in% c(4:8, 15:17) ~ kableExtra::cell_spec(., bold = T),
-            grepl("\\([1-9]+\\)|FALSE", .) ~ kableExtra::cell_spec(., bold = T, color = "red"),
-            !grepl("\\([1-9]+\\)|FALSE", .) ~ kableExtra::cell_spec(., bold = T, color = "green")
+            startsWith(Check, "Check NAs") ~ kableExtra::cell_spec(., bold = T),
+            grepl("\\([1-9]+\\)|\\(.*,.*\\)|FALSE", .) ~ kableExtra::cell_spec(., bold = T, color = "red"),
+            grepl("\\(0\\)|TRUE", .) ~ kableExtra::cell_spec(., bold = T, color = "green"),
+            TRUE ~ .
           )
         )
       ) %>%

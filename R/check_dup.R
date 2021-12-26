@@ -19,21 +19,25 @@ check_dup <- function(.source, .target) {
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
   cols_s_ <- cols_s_[!cols_s_ == "id"]
   cols_t_ <- cols_t_[!cols_t_ == "id"]
+  cols_t_ <- cols_t_[order(match(cols_t_,cols_s_))]
+  s_ <- tibble::as.tibble(.source)
+  t_ <- tibble::as.tibble(.target)
 
+  
 
   ind_ <- c(
-    purrr::map_int(cols_s_, ~ sum(duplicated(.source[[.x]]))),
-    purrr::map_int(cols_t_, ~ sum(duplicated(.target[[.x]])))
+    purrr::map_int(cols_s_, ~ sum(duplicated(s_[[.x]]))),
+    purrr::map_int(cols_t_, ~ sum(duplicated(t_[[.x]])))
   )
 
   cum_ <- c(
     purrr::map_int(
       .x = stats::setNames(seq_len(length(cols_s_)), names(cols_s_)),
-      .f = ~ sum(duplicated(apply(.source[, cols_s_[1:.x]], 1, paste, collapse = "-")))
+      .f = ~ sum(duplicated(apply(s_[, cols_s_[1:.x]], 1, paste, collapse = "-")))
     ),
     purrr::map_int(
       .x = stats::setNames(seq_len(length(cols_t_)), names(cols_t_)),
-      .f = ~ sum(duplicated(apply(.source[, cols_t_[1:.x]], 1, paste, collapse = "-")))
+      .f = ~ sum(duplicated(apply(t_[, cols_t_[1:.x]], 1, paste, collapse = "-")))
     )
   )
   
