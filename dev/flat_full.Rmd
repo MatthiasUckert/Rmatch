@@ -526,7 +526,7 @@ test_that("join_data works", {
 #' @return A dataframe
 #' 
 #' @export
-match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
+match_data <- function(.source, .target, .cols, %>% .join = NULL, .must_match = NULL, .max_match = 10,
                             .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
   if (.chunk > 1) {
     ls_ <- split(
