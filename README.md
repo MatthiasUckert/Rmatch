@@ -14,7 +14,7 @@ involves two datasets and (approximate) string matching
 You can install the development version of Rmatch like so:
 
 ``` r
-# devtools::install_github("https://github.com/MatthiasUckert/Rmatch)
+# devtools::install_github("https://github.com/MatthiasUckert/Rmatch")
 ```
 
 ## Example

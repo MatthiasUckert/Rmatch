@@ -2,7 +2,7 @@
 % Please edit documentation in R/standardize_data.R
 \name{standardize_data}
 \alias{standardize_data}
-\title{Title}
+\title{Standardize Data}
 \usage{
 standardize_data(.data, .cols, .fun = NULL)
 }

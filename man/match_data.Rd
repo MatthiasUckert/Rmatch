@@ -2,7 +2,7 @@
 % Please edit documentation in R/match_data.R
 \name{match_data}
 \alias{match_data}
-\title{Title}
+\title{Match Data}
 \usage{
 match_data(
   .source,

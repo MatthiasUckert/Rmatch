@@ -28,7 +28,7 @@ pkgload::load_all(path = here::here(), export_all = FALSE)
 ### Function
 
 ```{r function-standardize_str}
-#' Title
+#' Standardize Strings
 #' 
 #' Description
 #' 
@@ -87,7 +87,7 @@ test_that("standardize_str works", {
 
 ### Function
 ```{r function-standardize_data}
-#' Title
+#' Standardize Data
 #' 
 #' Description
 #' 
@@ -134,7 +134,7 @@ test_that("standardize_data works", {
 
 ### Function
 ```{r function-extract_legal_form}
-#' Title
+#' Extract Legal Forms
 #' 
 #' Description
 #' 
@@ -320,7 +320,7 @@ test_that("match_col works", {
 
 ### Function
 ```{r function-help_match_data}
-#' Title
+#' Match Data
 #' 
 #' Description
 #' 
@@ -506,7 +506,7 @@ test_that("join_data works", {
 
 ### Function
 ```{r function-match_data}
-#' Title
+#' Match Data
 #' 
 #' Description
 #' 
@@ -650,7 +650,7 @@ test_that("uniqueness_vec works", {
 
 ### Function
 ```{r function-uniqueness_data}
-#' Title
+#' Calculate Uniqueness of Data
 #' 
 #' Description
 #' 

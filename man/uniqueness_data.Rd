@@ -2,7 +2,7 @@
 % Please edit documentation in R/uniqueness_data.R
 \name{uniqueness_data}
 \alias{uniqueness_data}
-\title{Title}
+\title{Calculate Uniqueness of Data}
 \usage{
 uniqueness_data(.data, .cols, .type = c("source", "target"))
 }

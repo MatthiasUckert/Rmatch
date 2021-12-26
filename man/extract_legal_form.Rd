@@ -2,7 +2,7 @@
 % Please edit documentation in R/extract_legal_form.R
 \name{extract_legal_form}
 \alias{extract_legal_form}
-\title{Title}
+\title{Extract Legal Forms}
 \usage{
 extract_legal_form(
   .data,

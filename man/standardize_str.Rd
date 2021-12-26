@@ -2,7 +2,7 @@
 % Please edit documentation in R/standardize_str.R
 \name{standardize_str}
 \alias{standardize_str}
-\title{Title}
+\title{Standardize Strings}
 \usage{
 standardize_str(.str, .op = c("space", "punct", "case", "utf8"))
 }
