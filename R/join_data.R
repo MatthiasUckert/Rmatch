@@ -29,6 +29,9 @@
 #' )
 join_data <- function(.source, .target, .cols, .join, .method = "osa") {
   id_s <- id_t <- NULL
+  
+  check_id(.source, .target)
+  
   s_ <- .source[, c("id", .join)]
   t_ <- .target[, c("id", .join)]
   non_ <- .cols[!.cols %in% .join]

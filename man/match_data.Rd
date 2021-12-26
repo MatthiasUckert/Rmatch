@@ -8,6 +8,7 @@ match_data(
   .source,
   .target,
   .cols,
+  .join = NULL,
   .must_match = NULL,
   .max_match = 10,
   .min_sim = 0.8,
@@ -24,6 +25,8 @@ Must contain a unique column id and the columns you want to match on}
 Must contain a unique column id and the columns you want to match on}
 
 \item{.cols}{The column names to match as character vector}
+
+\item{.join}{Columns to match on}
 
 \item{.must_match}{Columns that must be matched perfectly}
 

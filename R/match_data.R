@@ -12,6 +12,8 @@
 #' Must contain a unique column id and the columns you want to match on
 #' @param .cols 
 #' The column names to match as character vector
+#' @param .join
+#' Columns to match on
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
 #' @param .min_sim 
@@ -38,28 +40,41 @@
 #'   .method = "osa", 
 #'   .progress = TRUE
 #' )
-match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
-                            .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
-  if (.chunk > 1) {
-    ls_ <- split(
-      x = .source,
-      f = rep(1:.chunk, each = ceiling(nrow(.source) / .chunk))[1:nrow(.source)]
-    )
+match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
+                       .min_sim = .8, .method = "osa", .chunk = 1, .progress = TRUE) {
+  id <- NULL
+  
+  check_id(.source, .target)
+  
+  if (!is.null(.join)) {
+    tab0_ <- join_data(.source, .target, .cols, .join)
+    s_ <- dplyr::filter(.source, !id %in% tab0_$id_s)
+    t_ <- dplyr::filter(.target, !id %in% tab0_$id_t)
   } else {
-    ls_ <- list("1" = .source)
+    tab0_ <- tibble::tibble(id_s = "", .rows = 0)
+    s_ <- .source
+    t_ <- .target
   }
 
-  
-  cols_ <- .cols[!.cols %in% .must_match]
-  
-  purrr::imap_dfr(
+
+  if (.chunk > 1) {
+    ls_ <- split(
+      x = s_,
+      f = rep(1:.chunk, each = ceiling(nrow(s_) / .chunk))[1:nrow(s_)]
+    )
+  } else {
+    ls_ <- list("1" = s_)
+  }
+
+
+  tab1_ <- purrr::imap_dfr(
     .x = ls_,
     .f = ~ {
       if (.progress) cat("\rITERATION", .y)
       help_match_data(
         .source = .x,
-        .target = .target,
-        .cols = cols_,
+        .target = t_,
+        .cols = .cols,
         .must_match = .must_match,
         .max_match = .max_match,
         .min_sim = .min_sim,
@@ -68,4 +83,6 @@ match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match =
       )
     }
   )
+
+  dplyr::bind_rows(tab0_, tab1_)
 }

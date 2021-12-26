@@ -40,6 +40,8 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
   
   sim <- NULL
   
+  check_id(.source, .target)
+  
   if (!is.null(.must_match)) {
     vs_ <- tidyr::unite(.source[, .must_match], "tmp", dplyr::everything())[["tmp"]]
     ls_ <- split(.source, vs_)
