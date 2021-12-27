@@ -19,24 +19,27 @@
 #' @examples
 #' tab_source <- table_source[1:100, ]
 #' tab_target <- table_target[1:999, ]
+#' cols <- c("name", "iso3", "city", "address")
+#' must <- "iso3"
 #' tab_match <- match_data(
-#'   .source = table_source[1:100, ],
-#'   .target = table_target[1:999, ],
-#'   .cols = c("name", "iso3", "city"),
-#'   .min_sim = .2,
-#'   .max_match = 10,
-#'   .method = "osa", 
-#'   .progress = TRUE
+#'   .source = tab_source,
+#'   .target = tab_target,
+#'   .cols = cols,
+#'   .must_match = must,
 #' )
 #' tab_score <- scores_data(
-#'   .matches = tab_match, 
-#'   .source = table_source, 
-#'   .target = table_target, 
-#'   .must_match = "iso3"
-#'   )
+#'   .matches = tab_match,
+#'   .source = tab_source,
+#'   .target = tab_target,
+#'   .must_match = must
+#' )
 #' 
-#' dedup_data(tab_score, tab_source, tab_target, "weight_mean")
-dedup_data <- function(.score, .source, .target, .col) {
+#' dedup_data(
+#'   .score = tab_score, 
+#'   .source = tab_source, 
+#'   .target = tab_target, 
+#'   )
+dedup_data <- function(.score, .source, .target, .col = "mean_weight") {
   id_s <- id_t <- name_s <- name_t <- NULL
   .score  <- tibble::as_tibble(.score)
   .source <- tibble::as_tibble(.source)

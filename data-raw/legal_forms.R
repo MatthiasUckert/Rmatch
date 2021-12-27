@@ -48,7 +48,7 @@ legal_form_all <- bind_rows(legal_form_gleif, legal_form_ecb) %>%
     type = if_else(grepl("full", type), "full", "abbr")
   ) %>%
   group_by(source, iso3, id) %>%
-  arrange(nchar(legal_form), .by_group = TRUE) %>%
+  arrange(desc(nchar(legal_form)), .by_group = TRUE) %>%
   mutate(legal_form_stand = first(legal_form)) %>%
   ungroup() %>%
   distinct(source, iso3, legal_form, legal_form_stand) %>%

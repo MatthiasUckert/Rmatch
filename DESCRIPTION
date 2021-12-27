@@ -16,17 +16,16 @@ Imports:
     magrittr,
     progress,
     purrr,
-    Rfast,
     rlang,
     scales,
     stats,
     stringdist,
     stringi,
     tibble,
-    tidyr
+    tidyr,
+    utils
 Suggests: 
     knitr,
-    printr,
     rmarkdown,
     tidyverse
 VignetteBuilder: 

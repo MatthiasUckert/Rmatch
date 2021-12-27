@@ -11,21 +11,20 @@
 #' 
 #' @noRd
 #' @examples
-#' uniqueness_vec(table_source[["name"]][1:10], TRUE)
+#' mean(uniqueness_vec(table_source[["name"]], TRUE), na.rm = TRUE) 
+#' mean(uniqueness_vec(table_source[["iso3"]], TRUE), na.rm = TRUE)
+#' mean(uniqueness_vec(table_source[["city"]], TRUE), na.rm = TRUE)
+#' mean(uniqueness_vec(table_source[["address"]], TRUE), na.rm = TRUE)
 uniqueness_vec <- function(.vec, .normalize = FALSE) {
   value <- name <- n <- NULL
   
-  l1_ <- stringi::stri_extract_all_regex(.vec, ".")
-  mat_ <- tibble::enframe(l1_) %>%
-    tidyr::unnest(value) %>%
-    dplyr::count(name, value) %>%
-    tidyr::pivot_wider(names_from = value, values_from = n, values_fill = 0) %>%
-    dplyr::select(-name) %>%
-    as.matrix()
-  man_ <- Rfast::Dist(mat_, method = "manhattan")
-  if (.normalize) {
-    man_ <- man_ / max(man_)
-  }
+  l1_ <- stringi::stri_split_fixed(.vec, " ")
+  v1_ <- unlist(l1_)
+  v1_ <- as.integer(stats::ave(v1_, v1_, FUN = length))
+  l1_ <- utils::relist(v1_, l1_)
+  v1_ <- purrr::map_dbl(l1_, ~ mean(.x, na.rm = TRUE))
   
-  rowMeans(man_)
+  v2_ <- as.integer(stats::ave(.vec, .vec, FUN = length))
+  
+  1 / ((v1_ + v2_) / 2)
 }

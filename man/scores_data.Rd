@@ -4,7 +4,14 @@
 \alias{scores_data}
 \title{Score Data}
 \usage{
-scores_data(.matches, .source, .target, .must_match = NULL, .weights = NULL)
+scores_data(
+  .matches,
+  .source,
+  .target,
+  .must_match = NULL,
+  .w_unique = NULL,
+  .w_custom = NULL
+)
 }
 \arguments{
 \item{.matches}{Dataframe produced by match_data()}
@@ -17,7 +24,9 @@ Must contain a unique column id and the columns you want to match on}
 
 \item{.must_match}{Columns that must be matched perfectly}
 
-\item{.weights}{Custom weights}
+\item{.w_unique}{Weights calucalted by get_weights()}
+
+\item{.w_custom}{Custom weights}
 }
 \value{
 A dataframe
@@ -26,14 +35,20 @@ A dataframe
 Description
 }
 \examples{
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols <- c("name", "iso3", "city", "address")
+must <- "iso3"
 tab_match <- match_data(
-  .source = table_source,
-  .target = table_target,
-  .cols = c("name", "iso3", "city"),
-  .min_sim = .2,
-  .max_match = 10,
-  .method = "osa", 
-  .progress = TRUE
+  .source = tab_source,
+  .target = tab_target,
+  .cols = cols,
+  .must_match = must,
 )
-tab_score <- scores_data(tab_match, table_source, table_target)
+scores_data(
+  .matches = tab_match,
+  .source = tab_source,
+  .target = tab_target,
+  .must_match = must
+)
 }

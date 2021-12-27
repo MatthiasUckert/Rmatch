@@ -598,15 +598,15 @@ match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL
 
 ### Example/Test
 ```{r example-match_data, eval=FALSE}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols <- c("name", "iso3", "city", "address")
+must <- "iso3"
 match_data(
-  .source = table_source[1:100, ],
-  .target = table_target[1:999, ],
-  .cols = c("name", "iso3", "city"),
-  .min_sim = .2,
-  .max_match = 10,
-  .must_match = "iso3",
-  .method = "osa", 
-  .progress = TRUE
+  .source = tab_source,
+  .target = tab_target,
+  .cols = cols,
+  .must_match = must,
 )
 ```
 
@@ -618,7 +618,7 @@ test_that("match_data works", {
 
 ## HELP: uniqueness_vec
 ```{r dev-uniqueness_vec}
-.vec <- standardize_str(table_source[["iso3"]])
+.vec <- standardize_str(table_source[["name"]])
 ```
 
 ### Function
@@ -636,19 +636,15 @@ test_that("match_data works", {
 uniqueness_vec <- function(.vec, .normalize = FALSE) {
   value <- name <- n <- NULL
   
-  l1_ <- stringi::stri_extract_all_regex(.vec, ".")
-  mat_ <- tibble::enframe(l1_) %>%
-    tidyr::unnest(value) %>%
-    dplyr::count(name, value) %>%
-    tidyr::pivot_wider(names_from = value, values_from = n, values_fill = 0) %>%
-    dplyr::select(-name) %>%
-    as.matrix()
-  man_ <- Rfast::Dist(mat_, method = "manhattan")
-  if (.normalize) {
-    man_ <- man_ / max(man_)
-  }
+  l1_ <- stringi::stri_split_fixed(.vec, " ")
+  v1_ <- unlist(l1_)
+  v1_ <- as.integer(stats::ave(v1_, v1_, FUN = length))
+  l1_ <- utils::relist(v1_, l1_)
+  v1_ <- purrr::map_dbl(l1_, ~ mean(.x, na.rm = TRUE))
   
-  rowMeans(man_)
+  v2_ <- as.integer(stats::ave(.vec, .vec, FUN = length))
+  
+  1 / ((v1_ + v2_) / 2)
 }
 ```
 
@@ -656,7 +652,10 @@ uniqueness_vec <- function(.vec, .normalize = FALSE) {
 
 ### Example/Test
 ```{r example-uniqueness_vec, eval=FALSE}
-uniqueness_vec(table_source[["name"]][1:10], TRUE)
+mean(uniqueness_vec(table_source[["name"]], TRUE), na.rm = TRUE) 
+mean(uniqueness_vec(table_source[["iso3"]], TRUE), na.rm = TRUE)
+mean(uniqueness_vec(table_source[["city"]], TRUE), na.rm = TRUE)
+mean(uniqueness_vec(table_source[["address"]], TRUE), na.rm = TRUE)
 ```
 
 ```{r tests-uniqueness_vec}
@@ -665,6 +664,48 @@ test_that("uniqueness_vec works", {
 })
 ```
 
+
+## MAIN: get_weights
+### Function
+
+```{r dev-get_weights}
+.data <- table_source
+.cols <- c("name", "city", "address")
+```
+
+
+```{r function-get_weights}
+#' Get Weights
+#' 
+#' Description
+#' 
+#' @param .data A Dataframe
+#' @param .cols columns
+#'
+#' @return A numeric vector
+#' 
+#' @export
+get_weights <- function(.data, .cols) {
+  . <- NULL
+  purrr::map_dbl(
+    .x = stats::setNames(.cols, .cols), 
+    .f = ~ mean(uniqueness_vec(.data[[.x]]), na.rm = TRUE)
+    ) %>% `/`(sum(., na.rm = TRUE))
+}
+```
+
+
+### Example Test
+```{r example-get_weights}
+get_weights(table_source, c("name", "city", "address"))
+```
+  
+```{r tests-get_weights}
+test_that("get_weights works", {
+  expect_true(inherits(get_weights, "function")) 
+})
+```
+  
 <!-- ## MAIN: uniqueness_data -->
 <!-- ```{r dev-uniqueness_data} -->
 <!-- .data <- table_source -->
@@ -711,21 +752,54 @@ test_that("uniqueness_vec works", {
 <!-- }) -->
 <!-- ``` -->
 
+## HELP: help_check_weights
+    
+```{r function-help_check_weights}
+#' Check Weights
+#'
+#' @param .weights weights 
+#' @param .cols columns
+#'
+#' @return Error
+help_check_weights <- function(.weights = NULL, .cols = NULL) {
+  if (!is.null(.weights)) {
+    nw_ <- sort(names(.weights)); nc_ <- sort(.cols)
+    lw_ <- length(nw_); lc_ <- length(nc_)
+    
+    if (lw_ == 0) stop(".weights must be a named vector")
+    if (!lw_ == lc_) stop(".weights and .cols must have the same length")
+    if (!all(nw_ == nc_)) stop(".weights and .cols must have the same names")
+  }
+}
+```
+  
+```{r example-help_check_weights}
+# help_check_weights()
+```
+  
+```{r tests-help_check_weights}
+test_that("help_check_weights works", {
+  expect_true(inherits(help_check_weights, "function")) 
+})
+```
+  
+
 ## MAIN: scores_data
 ```{r dev-scores_data}
 .matches <- match_data(
   .source = table_source[1:100, ],
   .target = table_target[1:999, ],
-  .cols = c("name", "iso3", "city"),
+  .cols = c("name", "iso3", "city", "address"),
   .min_sim = .2,
   .max_match = 10,
   .must_match = "iso3",
   .method = "osa", 
   .progress = FALSE
 )
-.source <- table_source
-.target <- table_target
-.weights <- c(name = .8, city = .2)
+.source <- table_source[1:100, ]
+.target <- table_target[1:999, ]
+.w_unique <- NULL
+.w_custom <- c(name = .6, city = .1, address = .3)
 .must_match = "iso3"
 ```
 
@@ -743,78 +817,69 @@ test_that("uniqueness_vec works", {
 #' The Target Dataframe. 
 #' Must contain a unique column id and the columns you want to match on
 #' @param .must_match Columns that must be matched perfectly
-#' @param .weights Custom weights
+#' @param .w_unique Weights calucalted by get_weights()
+#' @param .w_custom Custom weights
 #'
 #' @return A dataframe
 #' 
 #' @export
-scores_data <- function(.matches, .source, .target, .must_match = NULL, .weights = NULL) {
+scores_data <- function(.matches, .source, .target, .must_match = NULL, 
+                        .w_unique = NULL, .w_custom = NULL) {
   id_s <- id_t <- . <- NULL
-  
-  cols_ <- colnames(.matches)
-  cols_ <- cols_[grepl("^sim_", cols_)]
-  cols_ <- cols_[!cols_ == paste0("sim_", .must_match)]
-  
-  if (!is.null(.weights)) {
-    names_ <- names(.weights)
-    if (length(names_) == 0) {
-      stop(".weights must be a named vector")
-    }
-    if (!length(names_) == length(cols_)) {
-      stop(".weights must have the same length as .cols w/o .must_match")
-    }
-
-    if (!all(sort(names_) == gsub("sim_", "", sort(cols_)))) {
-      stop(".weights must have the same names as .cols w/o .must_match")
-    }
-
-    wc_ <- .weights[order(match(names(.weights), gsub("sim_", "", cols_)))]
-    wc_ <- wc_ / sum(wc_)
-  } else {
-    wc_ <- rep(NA_real_, length(cols_))
-  }
   
   .matches <- tibble::as_tibble(.matches)
   .source  <- tibble::as_tibble(.source)
   .target  <- tibble::as_tibble(.target)
   
-  ws_ <- purrr::map_dbl(
-    .x = gsub("sim_", "",cols_), 
-    .f = ~ mean(uniqueness_vec(.source[[.x]]))
-    ) %>% `/`(sum(.))
-
-  wt_ <- purrr::map_dbl(
-    .x = gsub("sim_", "", cols_),
-    .f = ~ mean(uniqueness_vec(.target[[.x]]))
-  ) %>% `/`(sum(.))
-
+  cols_ <- colnames(.matches)
+  cols_ <- gsub("sim_", "", cols_[grepl("^sim_", cols_)])
+  cols_ <- cols_[!cols_ %in% .must_match]
   
-  wa_ <- (ws_ + wt_) / 2
+  if (!is.null(.w_unique)) {
+    help_check_weights(.w_unique, cols_)
+    wu_ <- .w_unique
+  } else {
+    wu_ <- (get_weights(.source, cols_) + get_weights(.target, cols_)) / 2
+  }
   
-  mat_ <- as.matrix(.matches[, cols_])
+  if (!is.null(.w_custom)) {
+    help_check_weights(.w_custom, cols_)
+    wc_ <- .w_custom[order(match(names(.w_custom), cols_))]
+    wc_ <- wc_ / sum(wc_)
+  } else {
+    wc_ <- rep(NA_real_, length(cols_))
+  }
+
+  mat_ <- as.matrix(.matches[, paste0("sim_", cols_)])
   
   .matches %>%
-    dplyr::select(id_s, id_t) %>%
+    dplyr::select(id_s, id_t, dplyr::starts_with("sim_")) %>%
     dplyr::mutate(
-      simple_mean = rowMeans(mat_, na.rm = TRUE),
-      weight_mean = rowSums(mat_ * wa_, na.rm = TRUE),
-      custom_mean = rowSums(mat_ * wc_, na.rm = TRUE)
+      mean_simple = rowMeans(mat_, na.rm = TRUE),
+      mean_weight = rowSums(mat_ * wu_, na.rm = TRUE),
+      mean_custom = rowSums(mat_ * wc_, na.rm = TRUE)
     )
 }
 ```
 
 ### Example/Test
 ```{r example-scores_data, eval=FALSE}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols <- c("name", "iso3", "city", "address")
+must <- "iso3"
 tab_match <- match_data(
-  .source = table_source,
-  .target = table_target,
-  .cols = c("name", "iso3", "city"),
-  .min_sim = .2,
-  .max_match = 10,
-  .method = "osa", 
-  .progress = TRUE
+  .source = tab_source,
+  .target = tab_target,
+  .cols = cols,
+  .must_match = must,
 )
-tab_score <- scores_data(tab_match, table_source, table_target)
+scores_data(
+  .matches = tab_match,
+  .source = tab_source,
+  .target = tab_target,
+  .must_match = must
+)
 ```
 
 ```{r tests-scores_data}
@@ -825,11 +890,15 @@ test_that("scores_data works", {
 
 ## MAIN: dedup_data
 ```{r dev-dedup_data}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols <- c("name", "iso3", "city", "address")
+must <- "iso3"
 tab_match <- match_data(
-  .source = table_source,
-  .target = table_target,
-  .cols = c("name", "iso3", "city", "address"),
-  .must_match = "iso3"
+  .source = tab_source,
+  .target = tab_target,
+  .cols = cols,
+  .must_match = must,
 )
 .score <- scores_data(
   .matches = tab_match, 
@@ -860,7 +929,7 @@ tab_match <- match_data(
 #' @return A dataframe
 #' 
 #' @export
-dedup_data <- function(.score, .source, .target, .col) {
+dedup_data <- function(.score, .source, .target, .col = "mean_weight") {
   id_s <- id_t <- name_s <- name_t <- NULL
   .score  <- tibble::as_tibble(.score)
   .source <- tibble::as_tibble(.source)
@@ -889,23 +958,28 @@ dedup_data <- function(.score, .source, .target, .col) {
 
 ### Example/Test
 ```{r example-dedup_data, eval=FALSE}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols <- c("name", "iso3", "city", "address")
+must <- "iso3"
 tab_match <- match_data(
-  .source = table_source,
-  .target = table_target,
-  .cols = c("name", "iso3", "city"),
-  .min_sim = .2,
-  .max_match = 10,
-  .method = "osa", 
-  .progress = TRUE
+  .source = tab_source,
+  .target = tab_target,
+  .cols = cols,
+  .must_match = must,
 )
 tab_score <- scores_data(
-  .matches = tab_match, 
-  .source = table_source, 
-  .target = table_target, 
-  .must_match = "iso3"
-  )
+  .matches = tab_match,
+  .source = tab_source,
+  .target = tab_target,
+  .must_match = must
+)
 
-dedup_data(tab_score, tab_source, tab_target, "weight_mean")
+dedup_data(
+  .score = tab_score, 
+  .source = tab_source, 
+  .target = tab_target, 
+  )
 ```
 
 ```{r tests-dedup_data}

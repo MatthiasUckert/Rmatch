@@ -29,15 +29,15 @@
 #' 
 #' @export
 #' @examples
+#' tab_source <- table_source[1:100, ]
+#' tab_target <- table_target[1:999, ]
+#' cols <- c("name", "iso3", "city", "address")
+#' must <- "iso3"
 #' match_data(
-#'   .source = table_source[1:100, ],
-#'   .target = table_target[1:999, ],
-#'   .cols = c("name", "iso3", "city"),
-#'   .min_sim = .2,
-#'   .max_match = 10,
-#'   .must_match = "iso3",
-#'   .method = "osa", 
-#'   .progress = TRUE
+#'   .source = tab_source,
+#'   .target = tab_target,
+#'   .cols = cols,
+#'   .must_match = must,
 #' )
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
                        .min_sim = .2, .method = "osa", .chunk = 1, .progress = TRUE) {
