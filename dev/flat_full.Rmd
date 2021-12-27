@@ -522,7 +522,8 @@ test_that("join_data works", {
 .min_sim = 0
 .progress = TRUE
 .must_match = c("iso3")
-.chunk = 5
+.char_block = c(2, 5)
+
 ```
 
 ### Function
@@ -550,15 +551,18 @@ test_that("join_data works", {
 #' @param .must_match Columns that must be matched perfectly
 #' @param .progress Should a progress bar be shown?
 #' See stringdist package
-#' @param .chunk Chunk your data
+#' @param .char_block 
+#' Character Block Size
+#' First element chunks the source data in ngram blocks
+#' Second element allows for characters in target below/above block size
 #' @param .workers Number of cores
 #' @return A dataframe
 #' 
 #' @export
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
-                       .min_sim = .2, .method = "osa", .chunk = 1, .progress = TRUE,
+                       .min_sim = .2, .method = "osa", .char_block = c(Inf, Inf), .progress = TRUE,
                        .workers = future::availableCores()) {
-  id <- NULL
+  id <- n__ <- b__ <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
   
@@ -574,25 +578,36 @@ match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL
     s_ <- .source
     t_ <- .target
   }
-
-
-  if (.chunk > 1) {
-    ls_ <- split(
-      x = s_,
-      f = rep(1:.chunk, each = ceiling(nrow(s_) / .chunk))[1:nrow(s_)]
-    )
-  } else {
-    ls_ <- list("1" = s_)
+  
+  s_ <- s_ %>%
+    dplyr::mutate(n__ = nchar(!!dplyr::sym(.cols[1]))) %>% 
+    dplyr::arrange(n__) %>%
+    dplyr::mutate(b__ = floor(n__ / .char_block[1])) %>%
+    dplyr::group_by(b__) %>%
+    dplyr::mutate(b__ = paste0(dplyr::first(n__), "-", dplyr::last(n__))) %>%
+    dplyr::ungroup()
+  ls_ <- split(dplyr::select(s_, -c(n__, b__)), s_$b__)
+  t_ <- dplyr::mutate(t_, n__ = nchar(!!dplyr::sym(.cols[1])))
+  
+  filter_block <- function(.block, .tab, .size) {
+    int_ <- as.integer(unlist(stringi::stri_split_fixed(.block, "-")))
+    min_ <- int_[1] - .size
+    max_ <- int_[2] + .size
+    if (is.infinite(.size)) {
+      return(.tab)
+    } else {
+      return(dplyr::filter(.tab, n__ %in% min_:max_))
+    }
+    
   }
-
 
   tab1_ <- purrr::imap_dfr(
     .x = ls_,
     .f = ~ {
-      if (.progress) cat("\rITERATION", .y)
+      if (.progress) cat("\rCalculating Block:", .y, "     ")
       help_match_data(
         .source = .x,
-        .target = t_,
+        .target = filter_block(.y, t_, .char_block[2]),
         .cols = .cols,
         .must_match = .must_match,
         .max_match = .max_match,

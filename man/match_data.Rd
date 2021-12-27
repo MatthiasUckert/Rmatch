@@ -13,7 +13,7 @@ match_data(
   .max_match = 10,
   .min_sim = 0.2,
   .method = "osa",
-  .chunk = 1,
+  .char_block = c(Inf, Inf),
   .progress = TRUE,
   .workers = future::availableCores()
 )
@@ -37,10 +37,14 @@ Must contain a unique column id and the columns you want to match on}
 
 \item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"}
 
-\item{.chunk}{Chunk your data}
+\item{.char_block}{Character Block Size
+First element chunks the source data in ngram blocks
+Second element allows for characters in target below/above block size}
 
 \item{.progress}{Should a progress bar be shown?
 See stringdist package}
+
+\item{.workers}{Number of cores}
 }
 \value{
 A dataframe
