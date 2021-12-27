@@ -21,6 +21,8 @@
 #' @param .must_match Columns that must be matched perfectly
 #' @param .progress Should a progress bar be shown?
 #' See stringdist package
+#' @param .workers Number of cores
+#' 
 #' @return A Dataframe
 #' 
 #' @noRd
@@ -35,22 +37,22 @@
 #'   .method = "osa",
 #'   .progress = TRUE
 #'   )
-help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10, 
-                       .min_sim = .2, .method = "osa", .progress = TRUE) {
-  
+help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
+                            .min_sim = .2, .method = "osa", .progress = TRUE,
+                            .workers = future::availableCores()) {
   sim <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
-  
+
   check_id(.source, .target)
-  
+
   if (!is.null(.must_match)) {
     vs_ <- tidyr::unite(.source[, .must_match], "tmp", dplyr::everything())[["tmp"]]
     ls_ <- split(.source, vs_)
-    
+
     vt_ <- tidyr::unite(.target[, .must_match], "tmp", dplyr::everything())[["tmp"]]
     lt_ <- split(.target, vt_)
-    
+
     lt_ <- lt_[names(lt_) %in% names(ls_)]
     ls_ <- ls_[names(lt_)]
   } else {
@@ -62,14 +64,22 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
     pb <- progress::progress_bar$new(
       total = length(ls_),
       clear = FALSE, show_after = 1
-      )
+    )
   }
   purrr::map2_dfr(
     .x = ls_,
     .y = lt_,
     .f = ~ {
       if (.progress) pb$tick()
-      tab_ <- match_col(.x, .y, .cols[1], .max_match, .min_sim, .method)
+      tab_ <- match_col(
+        .source = .x,
+        .target = .y,
+        .col = .cols[1],
+        .max_match = .max_match,
+        .min_sim = .min_sim,
+        .method = .method,
+        .workers = .workers
+      )
 
       if (length(.cols) > 1) {
         s_ <- dplyr::left_join(tab_, .x, by = c("id_s" = "id"))
@@ -79,7 +89,6 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
           tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
         }
       }
-      gc()
       return(tab_)
     }
   )

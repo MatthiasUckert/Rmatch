@@ -40,7 +40,8 @@
 #'   .must_match = must,
 #' )
 match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
-                       .min_sim = .2, .method = "osa", .chunk = 1, .progress = TRUE) {
+                       .min_sim = .2, .method = "osa", .chunk = 1, .progress = TRUE,
+                       .workers = future::availableCores()) {
   id <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
@@ -81,7 +82,8 @@ match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL
         .max_match = .max_match,
         .min_sim = .min_sim,
         .method = .method,
-        .progress = .progress
+        .progress = .progress, 
+        .workers = .workers
       )
     }
   )

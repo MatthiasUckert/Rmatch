@@ -7,7 +7,7 @@
 #' @param .data A dataframe
 #' @param .col The column with firm names
 #' @param .legal_forms A dataframe with legal forms
-#' @param .workers NUmber of workers for parallelisation
+#' @param .workers Number of cores
 #'
 #' @return A dataframe
 #' 

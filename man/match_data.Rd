@@ -14,7 +14,8 @@ match_data(
   .min_sim = 0.2,
   .method = "osa",
   .chunk = 1,
-  .progress = TRUE
+  .progress = TRUE,
+  .workers = future::availableCores()
 )
 }
 \arguments{

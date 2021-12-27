@@ -18,7 +18,7 @@ extract_legal_form(
 
 \item{.legal_forms}{A dataframe with legal forms}
 
-\item{.workers}{NUmber of workers for parallelisation}
+\item{.workers}{Number of cores}
 }
 \value{
 A dataframe

@@ -19,6 +19,7 @@
 #' @param .method 
 #' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
 #' See stringdist package
+#' @param .workers Number of cores
 #'
 #' @return A Dataframe
 #' @noRd
@@ -31,7 +32,8 @@
 #'   .min_sim = .2,
 #'   .method = "osa"
 #' )
-match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .2, .method = "osa") {
+match_col <- function(.source, .target, .col, .max_match = 10, 
+                      .min_sim = .2, .method = "osa", .workers = future::availableCores()) {
   V1 <- value <- id <- name <- id_t <- sim <- NULL
   .source <- tibble::as_tibble(.source)
   .target <- tibble::as_tibble(.target)
@@ -50,7 +52,8 @@ match_col <- function(.source, .target, .col, .max_match = 10, .min_sim = .2, .m
   tab_ <- stringdist::stringsimmatrix(
     a = .source[[.col]],
     b = .target[[.col]],
-    method = method_
+    method = method_,
+    nthread = .workers
   ) %>%
     tibble::as_tibble() %>%
     dplyr::mutate(id = dplyr::row_number(), .before = V1) %>%
