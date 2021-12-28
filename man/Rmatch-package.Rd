@@ -6,7 +6,7 @@
 \alias{Rmatch-package}
 \title{Rmatch: A General Package For Any Matching Tasks}
 \description{
-Fuzzy match two dataframes
+Fuzzy match two dataframes. A general approach to matching.
 }
 \author{
 \strong{Maintainer}: Matthias Uckert \email{Matthias.Uckert@Outlook.com}

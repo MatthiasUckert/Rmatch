@@ -9,7 +9,7 @@ standardize_str(.str, .op = c("space", "punct", "case", "utf8"))
 \arguments{
 \item{.str}{A string}
 
-\item{.op}{Operations to perform}
+\item{.op}{One of c("space", "punct", "case", "utf8")}
 }
 \value{
 A string

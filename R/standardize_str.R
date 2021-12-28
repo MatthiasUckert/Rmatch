@@ -4,8 +4,10 @@
 #' 
 #' Description
 #' 
-#' @param .str A string
-#' @param .op Operations to perform
+#' @param .str 
+#' A string
+#' @param .op 
+#' One of c("space", "punct", "case", "utf8")
 #'
 #' @return A string
 #' 
@@ -14,28 +16,27 @@
 #' standardize_str(c("jkldsa   jkdhas   Ã¤Ã¤Ã¤  Â§$ ## #'''"))
 standardize_str <- function(.str, .op = c("space", "punct", "case", "utf8")) {
   str_ <- .str
-  
+
+  if ("ascii" %in% .op) {
+    str_ <- stringi::stri_trans_general(str_, "Latin-ASCII")
+  }
+
   if ("punct" %in% .op) {
     str_ <- trimws(stringi::stri_replace_all_regex(str_, "\\W", " "))
     str_ <- trimws(stringi::stri_replace_all_regex(str_, "[[:punct:]]", " "))
-    
+
     if (!"space" %in% .op) {
       str_ <- trimws(stringi::stri_replace_all_regex(str_, "([[:blank:]]|[[:space:]])+", " "))
     }
   }
-  
+
   if ("space" %in% .op) {
     str_ <- trimws(stringi::stri_replace_all_regex(str_, "([[:blank:]]|[[:space:]])+", " "))
   }
-  
+
   if ("case" %in% .op) {
     str_ <- toupper(str_)
   }
-  
-  if ("utf8" %in% .op) {
-    str_ <- stringi::stri_enc_toutf8(str_)
-  }
-  
+
   return(str_)
-  
 }
