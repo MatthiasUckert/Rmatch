@@ -7,14 +7,14 @@
 #' @param .str 
 #' A string
 #' @param .op 
-#' One of c("space", "punct", "case", "utf8")
+#' One of c("space", "punct", "case", "ascii")
 #'
 #' @return A string
 #' 
 #' @export
 #' @examples
 #' standardize_str(c("jkldsa   jkdhas   Ã¤Ã¤Ã¤  Â§$ ## #'''"))
-standardize_str <- function(.str, .op = c("space", "punct", "case", "utf8")) {
+standardize_str <- function(.str, .op = c("space", "punct", "case", "ascii")) {
   str_ <- .str
 
   if ("ascii" %in% .op) {

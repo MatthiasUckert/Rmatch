@@ -4,12 +4,12 @@
 \alias{standardize_str}
 \title{Standardize Strings}
 \usage{
-standardize_str(.str, .op = c("space", "punct", "case", "utf8"))
+standardize_str(.str, .op = c("space", "punct", "case", "ascii"))
 }
 \arguments{
 \item{.str}{A string}
 
-\item{.op}{One of c("space", "punct", "case", "utf8")}
+\item{.op}{One of c("space", "punct", "case", "ascii")}
 }
 \value{
 A string
