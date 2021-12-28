@@ -63,7 +63,7 @@ dedup_data <- function(
   .col_score = c("sms", "smw", "smc", "sss", "ssw", "ssc")
   ) {
   id_s <- id_t <- name_s <- name_t <- all_s <- all_t <- score <- 
-    `_id_` <- NULL
+    `_id_` <- len_s <- len_t <- NULL
   check_id(.source, .target)
   
   cols_score_ <- match.arg(.col_score, c("sms", "smw", "smc", "sss", "ssw", "ssc"))
@@ -95,7 +95,11 @@ dedup_data <- function(
       y = dplyr::select(target_, -c(`_id_`)), 
       by = c("id_t" = "id"), 
       suffix = c("_s", "_t")
-      )
+      ) %>%
+    dplyr::mutate(
+      len_s = lengths(all_s),
+      len_t = lengths(all_t)
+    )
   
-  tab_[, c("id_s", "id_t", "all_s", "all_t", "score", col_e_)]
+  tab_[, c("id_s", "id_t", "len_s", "len_t", "all_s", "all_t", "score", col_e_)]
 }
