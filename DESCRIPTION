@@ -1,9 +1,9 @@
 Package: Rmatch
 Title: A General Package For Any Matching Tasks
-Version: 0.0.0.9000
+Version: 0.1
 Authors@R: 
     person("Matthias", "Uckert", , "Matthias.Uckert@Outlook.com", role = c("aut", "cre"))
-Description: ...
+Description: Fuzzy match two dataframes. A general approach to matching.
 License: MIT + file LICENSE
 Depends: 
     R (>= 2.10)

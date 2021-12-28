@@ -29,12 +29,12 @@ You can install the development version of Rmatch like so:
 # devtools::install_github("https://github.com/MatthiasUckert/Rmatch")
 ```
 
-## Example
+## Example (Step-by-Step)
 
 Basic usage using build-in datasets. Check out the vignette for full specification
 
 ```{r example}
-library(Rmatch); library(kableExtra)
+library(Rmatch); library(kableExtra); library(tidyverse)
 ```
 
 Match Data:
@@ -52,9 +52,9 @@ check_data(tab_source, tab_target)
 
 Standardizing columns won't harm
 ```{r}
-cols <- c("name", "iso3", "city", "address")
-tab_source <- standardize_data(tab_source, cols)
-tab_target <- standardize_data(tab_target, cols)
+cols_match <- c("name", "iso3", "city", "address")
+tab_source <- standardize_data(tab_source, cols_match)
+tab_target <- standardize_data(tab_target, cols_match)
 ```
 
 Check again
@@ -65,12 +65,16 @@ check_data(tab_source, tab_target)
 
 Let's match the two dataframes
 ```{r}
+cols_join <- c("name", "iso3")
+cols_exact <- "iso3"
+method <- "soundex"
 tab_match <- match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = c("name", "iso3", "city", "address"),
-  .min_sim = .2,
-  .progress = FALSE
+  .cols_match = cols_match,
+  .cols_join = c("name", "iso3"),
+  .cols_exact = cols_exact,
+  .method = method,
 )
 ```
 
@@ -78,42 +82,91 @@ tab_match <- match_data(
 ```{r echo=FALSE}
 tab_match %>%
   head() %>%
-  kbl() %>%
-  kable_paper() %>%
-  kable_styling(bootstrap_options = "condensed", html_font = "Times New Roman", font_size = 12)
+  kbl(align = "c") %>%
+  kable_paper()%>%
+  kable_styling(
+    bootstrap_options = "condensed", 
+    html_font = "Times New Roman", 
+    font_size = 12
+    )
 ```
 
 Let's calculate the best matches
 ```{r}
-tab_score <- scores_data(tab_match)
+tab_score <- scores_data(
+  .matches = tab_match,
+  .source = tab_source,
+  .target = tab_target,
+  .cols_match = cols_match,
+  .cols_exact = cols_exact
+  )
 ```
 
 ```{r echo=FALSE}
 tab_score %>%
   head() %>%
-  kbl() %>%
+  kbl(align = "c") %>%
   kable_paper()%>%
-  kable_styling(bootstrap_options = "condensed", html_font = "Times New Roman", font_size = 12)
+  kable_styling(
+    bootstrap_options = "condensed", 
+    html_font = "Times New Roman", 
+    font_size = 12
+    )
 ```
 
 Finally Deduplicate Matches, DONE(ish)
 ```{r}
-tab_final <- dedup_data(
+col_score <- "sms"
+tab_final1 <- dedup_data(
   .score = tab_score,
   .source = tab_source,
   .target = tab_target,
-  .col = "score_square"
+  .cols_match = cols_match,
+  .col_score = col_score
 )
 ```
 
 ```{r echo=FALSE}
-tab_final %>%
+tab_final1 %>%
   head() %>%
-  kbl() %>%
-  kable_paper() %>%
-  kable_styling(bootstrap_options = "condensed", html_font = "Times New Roman", font_size = 8)
+  kbl(align = "c") %>%
+  kable_paper()%>%
+  kable_styling(
+    bootstrap_options = "condensed", 
+    html_font = "Times New Roman", 
+    font_size = 10
+    )
 ```
 
+## Example (All-in-One)
+```{r}
+tab_final2 <- match_complete(
+  .source = table_source,
+  .target = table_target,
+  .cols_match = cols_match,
+  .cols_join = cols_join,
+  .cols_exact = cols_exact,
+  .method = method,
+  .standardize = TRUE,
+  .col_score = col_score
+)
+```
+```{r}
+all.equal(tab_final1, tab_final2)
+```
+
+
+```{r echo=FALSE}
+tab_final2 %>%
+  head() %>%
+  kbl(align = "c") %>%
+  kable_paper()%>%
+  kable_styling(
+    bootstrap_options = "condensed", 
+    html_font = "Times New Roman", 
+    font_size = 10
+    )
+```
 
 ## Code of Conduct
 

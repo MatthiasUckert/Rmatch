@@ -17,13 +17,22 @@ You can install the development version of Rmatch like so:
 # devtools::install_github("https://github.com/MatthiasUckert/Rmatch")
 ```
 
-## Example
+## Example (Step-by-Step)
 
 Basic usage using build-in datasets. Check out the vignette for full
 specification
 
 ``` r
-library(Rmatch); library(kableExtra)
+library(Rmatch); library(kableExtra); library(tidyverse)
+#> -- Attaching packages --------------------------------------- tidyverse 1.3.1 --
+#> v ggplot2 3.3.5     v purrr   0.3.4
+#> v tibble  3.1.6     v dplyr   1.0.7
+#> v tidyr   1.1.4     v stringr 1.4.0
+#> v readr   2.1.1     v forcats 0.5.1
+#> -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+#> x dplyr::filter()     masks stats::filter()
+#> x dplyr::group_rows() masks kableExtra::group_rows()
+#> x dplyr::lag()        masks stats::lag()
 ```
 
 Match Data: You need 2 datasets, a source table (data you want to match)
@@ -248,13 +257,13 @@ Check (cumulative) duplicates for column(s): ‘address’
 Elements in Dataframe/Matrix
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">2,426</span>
+2,426
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">4,671</span>
+4,671
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">11,331,846</span>
+11,331,846
 </td>
 </tr>
 <tr>
@@ -266,7 +275,7 @@ Estimated memory allocation
 <td style="text-align:center;">
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">1,813 MB</span>
+1,813 MB
 </td>
 </tr>
 </tbody>
@@ -275,9 +284,9 @@ Estimated memory allocation
 Standardizing columns won’t harm
 
 ``` r
-cols <- c("name", "iso3", "city", "address")
-tab_source <- standardize_data(tab_source, cols)
-tab_target <- standardize_data(tab_target, cols)
+cols_match <- c("name", "iso3", "city", "address")
+tab_source <- standardize_data(tab_source, cols_match)
+tab_target <- standardize_data(tab_target, cols_match)
 ```
 
 Check again
@@ -494,13 +503,13 @@ Check (cumulative) duplicates for column(s): ‘address’
 Elements in Dataframe/Matrix
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">2,426</span>
+2,426
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">4,671</span>
+4,671
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">11,331,846</span>
+11,331,846
 </td>
 </tr>
 <tr>
@@ -512,7 +521,7 @@ Estimated memory allocation
 <td style="text-align:center;">
 </td>
 <td style="text-align:center;">
-<span style=" font-weight: bold;    ">1,813 MB</span>
+1,813 MB
 </td>
 </tr>
 </tbody>
@@ -521,157 +530,204 @@ Estimated memory allocation
 Let’s match the two dataframes
 
 ``` r
+cols_join <- c("name", "iso3")
+cols_exact <- "iso3"
+method <- "soundex"
 tab_match <- match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = c("name", "iso3", "city", "address"),
-  .min_sim = .2,
-  .progress = FALSE
+  .cols_match = cols_match,
+  .cols_join = c("name", "iso3"),
+  .cols_exact = cols_exact,
+  .method = method,
 )
+#> Calculating Block: 003-028
 ```
 
 <table class=" lightable-paper table table-condensed" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 12px; font-family: Times New Roman; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
-<th style="text-align:left;">
+<th style="text-align:center;">
 id_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 id_t
 </th>
-<th style="text-align:right;">
+<th style="text-align:center;">
+all_s
+</th>
+<th style="text-align:center;">
+all_t
+</th>
+<th style="text-align:center;">
 sim_name
 </th>
-<th style="text-align:right;">
+<th style="text-align:center;">
 sim_iso3
 </th>
-<th style="text-align:right;">
+<th style="text-align:center;">
 sim_city
 </th>
-<th style="text-align:right;">
+<th style="text-align:center;">
 sim_address
 </th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+52BE07D5
 </td>
-<td style="text-align:left;">
-1147DBEB
+<td style="text-align:center;">
+F671078F
 </td>
-<td style="text-align:right;">
-1.0000000
+<td style="text-align:center;">
+52BE07D5
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+F671078F
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:right;">
-1.0000000
-</td>
-<td style="text-align:right;">
-1.0000000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
-</td>
-<td style="text-align:left;">
-ECBDC99C
-</td>
-<td style="text-align:right;">
-0.8095238
-</td>
-<td style="text-align:right;">
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:right;">
-0.0769231
-</td>
-<td style="text-align:right;">
-0.4166667
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
-</td>
-<td style="text-align:left;">
-7E438459
-</td>
-<td style="text-align:right;">
-0.8000000
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-0.0000000
-</td>
-<td style="text-align:right;">
-0.0000000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
-</td>
-<td style="text-align:left;">
-737B2D6D
-</td>
-<td style="text-align:right;">
-0.7500000
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-0.0000000
-</td>
-<td style="text-align:right;">
-0.0000000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
-</td>
-<td style="text-align:left;">
-2E6064E6
-</td>
-<td style="text-align:right;">
-0.7500000
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-0.1818182
-</td>
-<td style="text-align:right;">
-0.1666667
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
-</td>
-<td style="text-align:left;">
-68EBF61D
-</td>
-<td style="text-align:right;">
-0.7391304
-</td>
-<td style="text-align:right;">
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:right;">
-0.3333333
+<td style="text-align:center;">
+0.9642857
 </td>
-<td style="text-align:right;">
-0.1904762
+</tr>
+<tr>
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+6E20553A
+</td>
+<td style="text-align:center;">
+E8E307AE
+</td>
+<td style="text-align:center;">
+6E20553A
+</td>
+<td style="text-align:center;">
+E8E307AE
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+0.0000000
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+C07A46B5
+</td>
+<td style="text-align:center;">
+775B36DB
+</td>
+<td style="text-align:center;">
+C07A46B5
+</td>
+<td style="text-align:center;">
+775B36DB
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+FB8EC365
+</td>
+<td style="text-align:center;">
+C7F93EC4
+</td>
+<td style="text-align:center;">
+FB8EC365
+</td>
+<td style="text-align:center;">
+C7F93EC4
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
 </td>
 </tr>
 </tbody>
@@ -680,109 +736,325 @@ ECBDC99C
 Let’s calculate the best matches
 
 ``` r
-tab_score <- scores_data(tab_match)
+tab_score <- scores_data(
+  .matches = tab_match,
+  .source = tab_source,
+  .target = tab_target,
+  .cols_match = cols_match,
+  .cols_exact = cols_exact
+  )
 ```
 
 <table class=" lightable-paper table table-condensed" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 12px; font-family: Times New Roman; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
-<th style="text-align:left;">
+<th style="text-align:center;">
 id_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 id_t
 </th>
-<th style="text-align:right;">
-score_mean
+<th style="text-align:center;">
+all_s
 </th>
-<th style="text-align:right;">
-score_square
+<th style="text-align:center;">
+all_t
+</th>
+<th style="text-align:center;">
+sim_name
+</th>
+<th style="text-align:center;">
+sim_iso3
+</th>
+<th style="text-align:center;">
+sim_city
+</th>
+<th style="text-align:center;">
+sim_address
+</th>
+<th style="text-align:center;">
+sms
+</th>
+<th style="text-align:center;">
+smw
+</th>
+<th style="text-align:center;">
+smc
+</th>
+<th style="text-align:center;">
+sss
+</th>
+<th style="text-align:center;">
+ssw
+</th>
+<th style="text-align:center;">
+ssc
 </th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+52BE07D5
 </td>
-<td style="text-align:left;">
-1147DBEB
+<td style="text-align:center;">
+F671078F
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+52BE07D5
+</td>
+<td style="text-align:center;">
+F671078F
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+0.9642857
+</td>
+<td style="text-align:center;">
+0.9880952
+</td>
+<td style="text-align:center;">
+0.6816429
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+0.9766156
+</td>
+<td style="text-align:center;">
+0.6737237
+</td>
+<td style="text-align:center;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
 1.0000000
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
 1.0000000
 </td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+1.6256599
 </td>
-<td style="text-align:left;">
-ECBDC99C
+<td style="text-align:center;">
+0
 </td>
-<td style="text-align:right;">
-0.5757784
+<td style="text-align:center;">
+1.0000000
 </td>
-<td style="text-align:right;">
-0.4587143
+<td style="text-align:center;">
+1.6256599
 </td>
-</tr>
-<tr>
-<td style="text-align:left;">
-291C5CB8
-</td>
-<td style="text-align:left;">
-7E438459
-</td>
-<td style="text-align:right;">
-0.2000000
-</td>
-<td style="text-align:right;">
-0.1600000
+<td style="text-align:center;">
+0
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+6E20553A
 </td>
-<td style="text-align:left;">
-737B2D6D
+<td style="text-align:center;">
+E8E307AE
 </td>
-<td style="text-align:right;">
-0.1875000
+<td style="text-align:center;">
+6E20553A
 </td>
-<td style="text-align:right;">
-0.1406250
+<td style="text-align:center;">
+E8E307AE
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+0.0000000
+</td>
+<td style="text-align:center;">
+0.6666667
+</td>
+<td style="text-align:center;">
+0.4563230
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+0.6666667
+</td>
+<td style="text-align:center;">
+0.4563230
+</td>
+<td style="text-align:center;">
+0
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+C07A46B5
 </td>
-<td style="text-align:left;">
-2E6064E6
+<td style="text-align:center;">
+775B36DB
 </td>
-<td style="text-align:right;">
-0.2746212
+<td style="text-align:center;">
+C07A46B5
 </td>
-<td style="text-align:right;">
-0.1558339
+<td style="text-align:center;">
+775B36DB
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+0.6898555
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+0.6898555
+</td>
+<td style="text-align:center;">
+0
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+FB8EC365
 </td>
-<td style="text-align:left;">
-68EBF61D
+<td style="text-align:center;">
+C7F93EC4
 </td>
-<td style="text-align:right;">
-0.5657350
+<td style="text-align:center;">
+FB8EC365
 </td>
-<td style="text-align:right;">
-0.4234265
+<td style="text-align:center;">
+C7F93EC4
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+1.6256599
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+1.6256599
+</td>
+<td style="text-align:center;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+0.6844846
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1.0000000
+</td>
+<td style="text-align:center;">
+0.6844846
+</td>
+<td style="text-align:center;">
+0
 </td>
 </tr>
 </tbody>
@@ -791,261 +1063,620 @@ ECBDC99C
 Finally Deduplicate Matches, DONE(ish)
 
 ``` r
-tab_final <- dedup_data(
+col_score <- "sms"
+tab_final1 <- dedup_data(
   .score = tab_score,
   .source = tab_source,
   .target = tab_target,
-  .col = "score_square"
+  .cols_match = cols_match,
+  .col_score = col_score
 )
 ```
 
-<table class=" lightable-paper table table-condensed" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 8px; font-family: Times New Roman; margin-left: auto; margin-right: auto;">
+<table class=" lightable-paper table table-condensed" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 10px; font-family: Times New Roman; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
-<th style="text-align:left;">
+<th style="text-align:center;">
 id_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 id_t
 </th>
-<th style="text-align:right;">
+<th style="text-align:center;">
+all_s
+</th>
+<th style="text-align:center;">
+all_t
+</th>
+<th style="text-align:center;">
 score
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 name_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 name_t
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 iso3_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 iso3_t
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 city_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 city_t
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 address_s
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 address_t
 </th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left;">
-291C5CB8
+<td style="text-align:center;">
+975AF234
 </td>
-<td style="text-align:left;">
-1147DBEB
+<td style="text-align:center;">
+67CC2286
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:left;">
-ASM INTERNATIONAL NV
+<td style="text-align:center;">
+1000MERCIS
 </td>
-<td style="text-align:left;">
-ASM INTERNATIONAL NV
+<td style="text-align:center;">
+1000MERCIS
 </td>
-<td style="text-align:left;">
-NLD
+<td style="text-align:center;">
+FRA
 </td>
-<td style="text-align:left;">
-NLD
+<td style="text-align:center;">
+FRA
 </td>
-<td style="text-align:left;">
-ALMERE
+<td style="text-align:center;">
+PARIS
 </td>
-<td style="text-align:left;">
-ALMERE
+<td style="text-align:center;">
+PARIS
 </td>
-<td style="text-align:left;">
-VERSTERKERSTRAAT 8
+<td style="text-align:center;">
+28 RUE DE CHATEAUDUN
 </td>
-<td style="text-align:left;">
-VERSTERKERSTRAAT 8
+<td style="text-align:center;">
+28 RUE DE CHATEAUDUN
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-2767155A
+<td style="text-align:center;">
+C07A46B5
 </td>
-<td style="text-align:left;">
-A1148A8D
+<td style="text-align:center;">
+775B36DB
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+C07A46B5
+</td>
+<td style="text-align:center;">
+775B36DB
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:left;">
-ATLAS COPCO AB
+<td style="text-align:center;">
+2G ENERGY AG
 </td>
-<td style="text-align:left;">
-ATLAS COPCO AB
+<td style="text-align:center;">
+2G ENERGY AG
 </td>
-<td style="text-align:left;">
-SWE
+<td style="text-align:center;">
+DEU
 </td>
-<td style="text-align:left;">
-SWE
+<td style="text-align:center;">
+DEU
 </td>
-<td style="text-align:left;">
-NACKA
+<td style="text-align:center;">
+HEEK
 </td>
-<td style="text-align:left;">
-NACKA
+<td style="text-align:center;">
+HEEK
 </td>
-<td style="text-align:left;">
-SICKLA INDUSTRIVAG 19
+<td style="text-align:center;">
+BENZSTRASSE 3
 </td>
-<td style="text-align:left;">
-SICKLA INDUSTRIVAG 19
+<td style="text-align:center;">
+BENZSTRASSE 3
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-69F3F1BD
+<td style="text-align:center;">
+FB8EC365
 </td>
-<td style="text-align:left;">
-BAB3BD1B
+<td style="text-align:center;">
+C7F93EC4
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+FB8EC365
+</td>
+<td style="text-align:center;">
+C7F93EC4
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:left;">
-BASF SE
+<td style="text-align:center;">
+2INVEST AG
 </td>
-<td style="text-align:left;">
-BASF SE
+<td style="text-align:center;">
+2INVEST AG
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 DEU
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 DEU
 </td>
-<td style="text-align:left;">
-LUDWIGSHAFEN AM RHEIN
+<td style="text-align:center;">
+HEIDELBERG
 </td>
-<td style="text-align:left;">
-LUDWIGSHAFEN AM RHEIN
+<td style="text-align:center;">
+HEIDELBERG
 </td>
-<td style="text-align:left;">
-CARL BOSCH STRASSE 38
+<td style="text-align:center;">
+ZIEGELHAUSER LANDSTR 3
 </td>
-<td style="text-align:left;">
-CARL BOSCH STRASSE 38
+<td style="text-align:center;">
+ZIEGELHAUSER LANDSTR 3
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-BB6D2999
+<td style="text-align:center;">
+9E715D89
 </td>
-<td style="text-align:left;">
-18162F6F
+<td style="text-align:center;">
+820A46E0
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:left;">
-DAIMLER AG
+<td style="text-align:center;">
+3U HOLDING AG
 </td>
-<td style="text-align:left;">
-DAIMLER AG
+<td style="text-align:center;">
+3U HOLDING AG
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 DEU
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 DEU
 </td>
-<td style="text-align:left;">
-STUTTGART
+<td style="text-align:center;">
+MARBURG
 </td>
-<td style="text-align:left;">
-STUTTGART
+<td style="text-align:center;">
+MARBURG
 </td>
-<td style="text-align:left;">
-MERCEDESSTRASSE 120
+<td style="text-align:center;">
+FRAUENBERGSTRASSE 31 33
 </td>
-<td style="text-align:left;">
-MERCEDESSTRASSE 120
+<td style="text-align:center;">
+FRAUENBERGSTRASSE 31 33
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-DF7D66DF
+<td style="text-align:center;">
+8953E4CF
 </td>
-<td style="text-align:left;">
-332C8FDD
+<td style="text-align:center;">
+566D4EAF
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+8953E4CF
+</td>
+<td style="text-align:center;">
+566D4EAF
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:left;">
-KONINKLIJKE KPN NV
+<td style="text-align:center;">
+5TH PLANET GAMES A S
 </td>
-<td style="text-align:left;">
-KONINKLIJKE KPN NV
+<td style="text-align:center;">
+5TH PLANET GAMES A S
 </td>
-<td style="text-align:left;">
-NLD
+<td style="text-align:center;">
+DNK
 </td>
-<td style="text-align:left;">
-NLD
+<td style="text-align:center;">
+DNK
 </td>
-<td style="text-align:left;">
-ROTTERDAM
+<td style="text-align:center;">
+COPENHAGEN
 </td>
-<td style="text-align:left;">
-ROTTERDAM
+<td style="text-align:center;">
+COPENHAGEN
 </td>
-<td style="text-align:left;">
-WILHELMINAKADE 123
+<td style="text-align:center;">
+GOTHERSGADE 11
 </td>
-<td style="text-align:left;">
-WILHELMINAKADE 123
+<td style="text-align:center;">
+GOTHERSGADE 11
 </td>
 </tr>
 <tr>
-<td style="text-align:left;">
-A6DD9B9C
+<td style="text-align:center;">
+5F1D6968
 </td>
-<td style="text-align:left;">
-BED2CB75
+<td style="text-align:center;">
+3269F9E1
 </td>
-<td style="text-align:right;">
+<td style="text-align:center;">
+5F1D6968
+</td>
+<td style="text-align:center;">
+3269F9E1
+</td>
+<td style="text-align:center;">
 1
 </td>
-<td style="text-align:left;">
-BAYER AG
+<td style="text-align:center;">
+7C SOLARPARKEN AG
 </td>
-<td style="text-align:left;">
-BAYER AG
+<td style="text-align:center;">
+7C SOLARPARKEN AG
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 DEU
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 DEU
 </td>
-<td style="text-align:left;">
-LEVERKUSEN
+<td style="text-align:center;">
+BAYREUTH
 </td>
-<td style="text-align:left;">
-LEVERKUSEN
+<td style="text-align:center;">
+BAYREUTH
 </td>
-<td style="text-align:left;">
-KAISER WILHELM ALLEE 1
+<td style="text-align:center;">
+AN DER FEUERWACHE 15
 </td>
-<td style="text-align:left;">
-KAISER WILHELM ALLEE 1
+<td style="text-align:center;">
+AN DER FEUERWACHE 15
+</td>
+</tr>
+</tbody>
+</table>
+
+## Example (All-in-One)
+
+``` r
+tab_final2 <- match_complete(
+  .source = table_source,
+  .target = table_target,
+  .cols_match = cols_match,
+  .cols_join = cols_join,
+  .cols_exact = cols_exact,
+  .method = method,
+  .standardize = TRUE,
+  .col_score = col_score
+)
+#> Calculating Block: 003-028
+```
+
+``` r
+all.equal(tab_final1, tab_final2)
+#> [1] TRUE
+```
+
+<table class=" lightable-paper table table-condensed" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 10px; font-family: Times New Roman; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:center;">
+id_s
+</th>
+<th style="text-align:center;">
+id_t
+</th>
+<th style="text-align:center;">
+all_s
+</th>
+<th style="text-align:center;">
+all_t
+</th>
+<th style="text-align:center;">
+score
+</th>
+<th style="text-align:center;">
+name_s
+</th>
+<th style="text-align:center;">
+name_t
+</th>
+<th style="text-align:center;">
+iso3_s
+</th>
+<th style="text-align:center;">
+iso3_t
+</th>
+<th style="text-align:center;">
+city_s
+</th>
+<th style="text-align:center;">
+city_t
+</th>
+<th style="text-align:center;">
+address_s
+</th>
+<th style="text-align:center;">
+address_t
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
+975AF234
+</td>
+<td style="text-align:center;">
+67CC2286
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1000MERCIS
+</td>
+<td style="text-align:center;">
+1000MERCIS
+</td>
+<td style="text-align:center;">
+FRA
+</td>
+<td style="text-align:center;">
+FRA
+</td>
+<td style="text-align:center;">
+PARIS
+</td>
+<td style="text-align:center;">
+PARIS
+</td>
+<td style="text-align:center;">
+28 RUE DE CHATEAUDUN
+</td>
+<td style="text-align:center;">
+28 RUE DE CHATEAUDUN
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+C07A46B5
+</td>
+<td style="text-align:center;">
+775B36DB
+</td>
+<td style="text-align:center;">
+C07A46B5
+</td>
+<td style="text-align:center;">
+775B36DB
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+2G ENERGY AG
+</td>
+<td style="text-align:center;">
+2G ENERGY AG
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+HEEK
+</td>
+<td style="text-align:center;">
+HEEK
+</td>
+<td style="text-align:center;">
+BENZSTRASSE 3
+</td>
+<td style="text-align:center;">
+BENZSTRASSE 3
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+FB8EC365
+</td>
+<td style="text-align:center;">
+C7F93EC4
+</td>
+<td style="text-align:center;">
+FB8EC365
+</td>
+<td style="text-align:center;">
+C7F93EC4
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+2INVEST AG
+</td>
+<td style="text-align:center;">
+2INVEST AG
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+HEIDELBERG
+</td>
+<td style="text-align:center;">
+HEIDELBERG
+</td>
+<td style="text-align:center;">
+ZIEGELHAUSER LANDSTR 3
+</td>
+<td style="text-align:center;">
+ZIEGELHAUSER LANDSTR 3
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
+9E715D89
+</td>
+<td style="text-align:center;">
+820A46E0
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+3U HOLDING AG
+</td>
+<td style="text-align:center;">
+3U HOLDING AG
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+MARBURG
+</td>
+<td style="text-align:center;">
+MARBURG
+</td>
+<td style="text-align:center;">
+FRAUENBERGSTRASSE 31 33
+</td>
+<td style="text-align:center;">
+FRAUENBERGSTRASSE 31 33
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+8953E4CF
+</td>
+<td style="text-align:center;">
+566D4EAF
+</td>
+<td style="text-align:center;">
+8953E4CF
+</td>
+<td style="text-align:center;">
+566D4EAF
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+5TH PLANET GAMES A S
+</td>
+<td style="text-align:center;">
+5TH PLANET GAMES A S
+</td>
+<td style="text-align:center;">
+DNK
+</td>
+<td style="text-align:center;">
+DNK
+</td>
+<td style="text-align:center;">
+COPENHAGEN
+</td>
+<td style="text-align:center;">
+COPENHAGEN
+</td>
+<td style="text-align:center;">
+GOTHERSGADE 11
+</td>
+<td style="text-align:center;">
+GOTHERSGADE 11
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+5F1D6968
+</td>
+<td style="text-align:center;">
+3269F9E1
+</td>
+<td style="text-align:center;">
+5F1D6968
+</td>
+<td style="text-align:center;">
+3269F9E1
+</td>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+7C SOLARPARKEN AG
+</td>
+<td style="text-align:center;">
+7C SOLARPARKEN AG
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+DEU
+</td>
+<td style="text-align:center;">
+BAYREUTH
+</td>
+<td style="text-align:center;">
+BAYREUTH
+</td>
+<td style="text-align:center;">
+AN DER FEUERWACHE 15
+</td>
+<td style="text-align:center;">
+AN DER FEUERWACHE 15
 </td>
 </tr>
 </tbody>
