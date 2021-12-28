@@ -4,18 +4,20 @@
 #' 
 #' Description
 #' 
-#' @param .data A Dataframe
-#' @param .cols columns
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
 #'
 #' @return A numeric vector
 #' 
 #' @export
 #' @examples
 #' get_weights(table_source, c("name", "city", "address"))
-get_weights <- function(.data, .cols) {
+get_weights <- function(.tab, .cols_match) {
   . <- NULL
   purrr::map_dbl(
-    .x = stats::setNames(.cols, .cols), 
-    .f = ~ mean(uniqueness_vec(.data[[.x]]), na.rm = TRUE)
+    .x = stats::setNames(.cols_match, .cols_match), 
+    .f = ~ mean(uniqueness_vec(.tab[[.x]]), na.rm = TRUE)
     ) %>% `/`(sum(., na.rm = TRUE))
 }

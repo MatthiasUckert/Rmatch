@@ -20,6 +20,9 @@ check_id <- function(.source, .target, .error = TRUE) {
   cols_s_ <- colnames(.source)
   cols_t_ <- colnames(.target)
 
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   es_ <- "id" %in% cols_s_
   et_ <- "id" %in% cols_t_
 

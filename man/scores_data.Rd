@@ -8,7 +8,8 @@ scores_data(
   .matches,
   .source,
   .target,
-  .must_match = NULL,
+  .cols_match,
+  .cols_exact = NULL,
   .w_unique = NULL,
   .w_custom = NULL
 )
@@ -16,17 +17,20 @@ scores_data(
 \arguments{
 \item{.matches}{Dataframe produced by match_data()}
 
-\item{.source}{The Source Dataframe.
-Must contain a unique column id and the columns you want to match on}
+\item{.source}{The Source Dataframe.\cr
+(Must contain a unique column id and the columns you want to match on)}
 
-\item{.target}{The Target Dataframe.
-Must contain a unique column id and the columns you want to match on}
+\item{.target}{The Target Dataframe.\cr
+(Must contain a unique column id and the columns you want to match on)}
 
-\item{.must_match}{Columns that must be matched perfectly}
+\item{.cols_match}{A character vector of columns to perform fuzzy matching.}
 
-\item{.w_unique}{Weights calucalted by get_weights()}
+\item{.cols_exact}{Columns that must be matched perfectly.\cr
+(Data will be partitioned using those columns)}
 
-\item{.w_custom}{Custom weights}
+\item{.w_unique}{Weights calculated by get_weights()}
+
+\item{.w_custom}{A named numeric vector that matches the columns of .cols_match w/o the columns of .cols_exact}
 }
 \value{
 A dataframe
@@ -37,18 +41,22 @@ Description
 \examples{
 tab_source <- table_source[1:100, ]
 tab_target <- table_target[1:999, ]
-cols <- c("name", "iso3", "city", "address")
-must <- "iso3"
+cols_match <- c("name", "iso3", "city", "address")
+cols_exact <- "iso3"
+cols_join  <- c("name", "iso3")
 tab_match <- match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = cols,
-  .must_match = must,
+  .cols_match = cols_match,
+  .cols_exact = cols_exact,
+  .cols_join = cols_join,
+  .method = "soundex",
 )
 scores_data(
-  .matches = tab_match,
-  .source = tab_source,
-  .target = tab_target,
-  .must_match = must
-)
+  .matches = tab_match, 
+  .source = tab_source, 
+  .target = tab_target, 
+  .cols_match = cols_match,
+  .cols_exact = cols_exact
+  )
 }

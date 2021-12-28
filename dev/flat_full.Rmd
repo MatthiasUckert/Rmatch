@@ -9,13 +9,16 @@ editor_options:
 
 <!-- Store every call to library() that you need to explore your functions -->
 
-```{r development, include=FALSE}
+# Setup
+```{r development-1, include=FALSE}
 library(testthat); library(tidyverse); library(stringi); library(fst)
 ```
 
 ```{r development-2}
-pkgload::load_all(path = here::here(), export_all = FALSE)
+pkgload::load_all(path = here::here(), export_all = TRUE)
 ```
+
+
 
 # Functions
 
@@ -80,7 +83,7 @@ test_that("standardize_str works", {
 
 ## MAIN: standardize_data
 ```{r dev-standardize_data}
-.data <- table_source
+.tab <- table_source
 .cols <- c("name", "iso3", "city", "address")
 .op = c("space", "punct", "case", "utf8")
 ```
@@ -91,22 +94,24 @@ test_that("standardize_str works", {
 #' 
 #' Description
 #' 
-#' @param .data A dataframe
-#' @param .cols Columns to standardize
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
 #' @param .fun Function for standardization, if NULL standardize_str() is used
 #'
 #' @return A dataframe
 #' 
 #' @export
-standardize_data <- function(.data, .cols, .fun = NULL) {
-  tab_ <- tibble::as_tibble(.data)
+standardize_data <- function(.tab, .cols_match, .fun = NULL) {
+  tab_ <- tibble::as_tibble(.tab)
   if (is.null(.fun)) {
     f_ <- standardize_str
   } else {
     f_ <- .fun
   }
   
-  for (i in .cols) {
+  for (i in .cols_match) {
     tab_[[i]] <- f_(tab_[[i]])
   }
   return(tab_)
@@ -126,7 +131,7 @@ test_that("standardize_data works", {
 
 ## MAIN: extract_legal_form
 ```{r dev-extract_legal_form}
-.data <- table_source
+.tab <- table_source
 .col <- "name"
 .legal_forms <- tibble(.rows = 0)
 .workers = future::availableCores()
@@ -138,20 +143,22 @@ test_that("standardize_data works", {
 #' 
 #' Description
 #' 
-#' @param .data A dataframe
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
 #' @param .col The column with firm names
 #' @param .legal_forms A dataframe with legal forms
-#' @param .workers Number of cores
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
 #'
 #' @return A dataframe
 #' 
 #' @importFrom rlang :=
 #' 
 #' @export
-extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
+extract_legal_form <- function(.tab, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
   tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
   
-  .data <- tibble::as_tibble(.data)
+  .tab <- tibble::as_tibble(.tab)
   
   if (nrow(.legal_forms) == 0) {
     tab_lf_ <- get("legal_form_all")
@@ -159,12 +166,12 @@ extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .worker
     tab_lf_ <- .legal_forms
   }
 
-  tab_ <- standardize_data(.data, .col)
+  tab_ <- standardize_data(.tab, .col)
   lf_ <- unique(tab_lf_[["legal_form_orig"]])
   nm_ <- tab_[[.col]]
 
   f_ <- carrier::crate(function(.lf, .nm) which(endsWith(.nm, paste0(" ", .lf))))
-  future::plan("multisession", workers = 6)
+  future::plan("multisession", workers = .workers)
   lf_ext_ <- furrr::future_map(
     .x = purrr::set_names(lf_, lf_),
     .f = ~ f_(.x, nm_),
@@ -221,17 +228,72 @@ test_that("extract_legal_form works", {
 })
 ```
 
-## HELP: match_col
-```{r dev-match_col}
-.source <- bind_rows(table_source[1:100, ], table_source[1:100, ])
-.target <- table_target[1:999, ]
-.col <- "name"
-.method = "osa"
-.max_match = 10
-.min_sim = 0
+## HELP: prep_tables
+### Function
+```{r dev-prep_tables}
+.tab <- table_source
+.cols_match <- c("name", "iso3", "city", "address")
+
 ```
 
+```{r function-prep_tables}
+#' Prepare Table
+#' 
+#' Description
+#' 
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
+#'
+#' @return
+#' 
+#' @noRd
+prep_tables <- function(.tab, .cols_match) {
+  tmp <- id <- `_id_` <- NULL
+  if (!"_id_" %in% colnames(.tab)) {
+    tidyr::unite(
+      data = tibble::as_tibble(.tab[, c("id", .cols_match)]),
+      col = tmp,
+      !dplyr::matches("^id$")
+    ) %>%
+      dplyr::group_by(tmp) %>%
+      dplyr::summarise(
+        `_id_` = list(id),
+        id = dplyr::first(id),
+        .groups = "drop"
+      ) %>%
+      dplyr::select(id, `_id_`) %>%
+      dplyr::left_join(.tab, by = "id")
+  } else {
+    .tab
+  }
+}
+```
+
+### Example/Test
+```{r example-prep_tables}
+prep_tables(table_source, c("name", "iso3", "city", "address"))
+```
+  
+```{r tests-prep_tables}
+test_that("prep_tables works", {
+  expect_true(inherits(prep_tables, "function")) 
+})
+```
+  
+
+## HELP: match_col
 ### Function
+```{r dev-match_col}
+.source <- bind_rows(table_source[1:100, ], dplyr::mutate(table_source[1:100, ], id = paste0(id, "-1")))
+.target <- table_target[1:999, ]
+.cols_match <- c("name", "iso3", "city", "address")
+.max_match <- 10
+.method <- "osa"
+.workers <- future::availableCores()
+```
+
 
 ```{r function-match_col}
 #' Match a on a single column
@@ -239,59 +301,58 @@ test_that("extract_legal_form works", {
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .col 
-#' The column name to match as a string
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
-#' @param .min_sim 
-#' Minimum Similarity as defined by the chosen method
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
-#' See stringdist package
-#' @param .workers Number of cores
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
 #'
 #' @return A Dataframe
-match_col <- function(.source, .target, .col, .max_match = 10, 
-                      .min_sim = .2, .method = "osa", .workers = future::availableCores()) {
-  V1 <- value <- id <- name <- id_t <- sim <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
+match_col <- function(
+  .source, .target, .cols_match, .max_match = 10, .method = "osa", 
+  .workers = future::availableCores()
+  ) {
   
+  V1 <- value <- id <- name <- id_t <- sim <- NULL
   
   check_id(.source, .target)
   
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
+  
   method_ <- match.arg(
     arg = .method,
-    choices = c(
-      "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine",
-      "jaccard", "jw", "soundex"
-    )
+    choices = c("osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex")
   )
   
   tab_ <- stringdist::stringsimmatrix(
-    a = .source[[.col]],
-    b = .target[[.col]],
+    a = source_[[.cols_match[1]]],
+    b = target_[[.cols_match[1]]],
     method = method_,
     nthread = .workers
   ) %>%
     tibble::as_tibble() %>%
     dplyr::mutate(id = dplyr::row_number(), .before = V1) %>%
     tidyr::pivot_longer(!dplyr::matches("id")) %>%
-    dplyr::filter(value >= .min_sim) %>%
     dplyr::group_by(id) %>%
     dplyr::slice_max(order_by = value, n = .max_match) %>%
     dplyr::ungroup() %>%
     dplyr::rename(id_s = id, id_t = name) %>%
     dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
     suppressWarnings()
-  tab_[["id_s"]] <- .source[["id"]][tab_[["id_s"]]]
-  tab_[["id_t"]] <- .target[["id"]][tab_[["id_t"]]]
-  colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .col))
+  
+  tab_[["id_s"]] <- source_[["id"]][tab_[["id_s"]]]
+  tab_[["id_t"]] <- target_[["id"]][tab_[["id_t"]]]
+  colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .cols_match[1]))
   return(tab_)
 }
 ```
@@ -301,10 +362,7 @@ match_col <- function(.source, .target, .col, .max_match = 10,
 match_col(
   .source = table_source[1:100, ],
   .target = table_target[1:999, ],
-  .col = "name",
-  .max_match = 10,
-  .min_sim = .2,
-  .method = "osa"
+  .cols_match = c("name", "iso3", "city", "address")
 )
 ```
 
@@ -316,14 +374,14 @@ test_that("match_col works", {
 
 ## HELP: help_match_data
 ```{r dev-help_match_data}
-.source = bind_rows(table_source[1:100, ], table_source[1:100, ])
-.target = table_target[1:999, ]
-.cols = c("name", "iso3", "city", "address")
-.method = "osa"
+.source <- bind_rows(table_source[1:100, ], dplyr::mutate(table_source[1:100, ], id = paste0(id, "-1")))
+.target <- table_target[1:999, ]
+.cols_match <- c("name", "iso3", "city", "address")
+.cols_exact = NULL
 .max_match = 10
-.min_sim = 0
-.progress = TRUE
-.must_match = c("iso3")
+.method = "osa"
+.verbose = TRUE
+.workers = future::availableCores()
 ```
 
 ### Function
@@ -333,50 +391,56 @@ test_that("match_col works", {
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .cols 
-#' The column names to match as character vector
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
-#' @param .min_sim 
-#' Minimum Similarity as defined by the chosen method
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
-#' @param .must_match Columns that must be matched perfectly
-#' @param .progress Should a progress bar be shown?
-#' See stringdist package
-#' @param .workers Number of cores
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .verbose 
+#' Print additional information?
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
 #' 
 #' @return A Dataframe
 #' 
-help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
-                            .min_sim = .2, .method = "osa", .progress = TRUE,
-                            .workers = future::availableCores()) {
+help_match_data <- function(
+  .source, .target, .cols_match, .cols_exact = NULL, .max_match = 10,
+  .method = "osa", .verbose = TRUE, .workers = future::availableCores()
+  ) {
+  
   sim <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
-
+  
   check_id(.source, .target)
+  
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
 
-  if (!is.null(.must_match)) {
-    vs_ <- tidyr::unite(.source[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    ls_ <- split(.source, vs_)
+  
+  if (!is.null(.cols_exact)) {
+    vs_ <- tidyr::unite(source_[, .cols_exact], "tmp", dplyr::everything())[["tmp"]]
+    ls_ <- split(source_, vs_)
 
-    vt_ <- tidyr::unite(.target[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    lt_ <- split(.target, vt_)
+    vt_ <- tidyr::unite(target_[, .cols_exact], "tmp", dplyr::everything())[["tmp"]]
+    lt_ <- split(target_, vt_)
 
     lt_ <- lt_[names(lt_) %in% names(ls_)]
     ls_ <- ls_[names(lt_)]
   } else {
-    ls_ <- list(.source)
-    lt_ <- list(.target)
+    ls_ <- list(source_)
+    lt_ <- list(target_)
   }
 
-  if (.progress) {
+  if (.verbose) {
     pb <- progress::progress_bar$new(
       total = length(ls_),
       clear = FALSE, show_after = 1
@@ -386,23 +450,27 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
     .x = ls_,
     .y = lt_,
     .f = ~ {
-      if (.progress) pb$tick()
+      if (.verbose) pb$tick()
       tab_ <- match_col(
         .source = .x,
         .target = .y,
-        .col = .cols[1],
+        .cols_match = .cols_match,
         .max_match = .max_match,
-        .min_sim = .min_sim,
         .method = .method,
         .workers = .workers
       )
 
-      if (length(.cols) > 1) {
+      if (length(.cols_match) > 1) {
         s_ <- dplyr::left_join(tab_, .x, by = c("id_s" = "id"))
         t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
 
-        for (i in 2:length(.cols)) {
-          tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+        for (i in 2:length(.cols_match)) {
+          cols_sim_ <- paste0("sim_", .cols_match[i])
+          tab_[[cols_sim_]] <- stringdist::stringsim(
+            a = s_[[.cols_match[i]]], 
+            b = t_[[.cols_match[i]]], 
+            method = .method
+            )
         }
       }
       return(tab_)
@@ -417,12 +485,12 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
 help_match_data(
   .source = table_source[1:100, ], 
   .target = table_target[1:999, ], 
-  .cols = c("name", "iso3", "city"), 
-  .max_match = 10, 
-  .min_sim = .2, 
-  .must_match = "iso3",
+  .cols_match = c("name", "iso3", "city", "address"),
+  .cols_exact = NULL,
+  .max_match = 10,
   .method = "osa",
-  .progress = TRUE
+  .verbose = TRUE,
+  .workers = 4
   )
 ```
 
@@ -439,8 +507,8 @@ test_that("match_data works", {
 ```{r dev-join_data}
 .source = table_source[1:100, ]
 .target = table_target[1:999, ]
-.cols = c("name", "iso3", "city", "address")
-.join <- c("name", "iso3")
+.cols_match = c("name", "iso3", "city", "address")
+.cols_join <- c("name", "iso3")
 .method = "osa"
 ```
 
@@ -450,37 +518,39 @@ test_that("match_data works", {
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .cols 
-#' The column names to match as character vector
-#' @param .join
-#' Columns to match on
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
+#' @param .cols_join
+#' Columns to perfrom an exact match on, before fuzzy-matching.\cr
+#' (Matched IDs will be excluded from fuzzy-match)
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
 #' @return A Dataframe
 #' 
 #' @export
-join_data <- function(.source, .target, .cols, .join, .method = "osa") {
+join_data <- function(.source, .target, .cols_match, .cols_join, .method = "osa") {
   id_s <- id_t <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
   
   check_id(.source, .target)
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
   
-  s_ <- .source[, c("id", .join)]
-  t_ <- .target[, c("id", .join)]
-  non_ <- .cols[!.cols %in% .join]
+  s_ <- source_[, c("id", .cols_join)]
+  t_ <- target_[, c("id", .cols_join)]
+  non_ <- .cols_match[!.cols_match %in% .cols_join]
 
-  tab_ <- dplyr::inner_join(s_, t_, by = .join, suffix = c("_s", "_t")) %>%
+  tab_ <- dplyr::inner_join(s_, t_, by = .cols_join, suffix = c("_s", "_t")) %>%
     dplyr::mutate(
       dplyr::across(!dplyr::matches("^id_s$|^id_t$"), ~1)
     ) %>%
     dplyr::select(id_s, id_t, dplyr::everything()) %>%
-    `colnames<-`(c("id_s", "id_t", paste0("sim_", .join)))
+    `colnames<-`(c("id_s", "id_t", paste0("sim_", .cols_join)))
 
   s_ <- dplyr::left_join(tab_, .source[, c("id", non_)], by = c("id_s" = "id"))
   t_ <- dplyr::left_join(tab_, .target[, c("id", non_)], by = c("id_t" = "id"))
@@ -498,8 +568,8 @@ join_data <- function(.source, .target, .cols, .join, .method = "osa") {
 join_data(
   .source = table_source,
   .target = table_target,
-  .cols = c("name", "iso3", "city", "address"),
-  .join = c("name", "iso3"),
+  .cols_match = c("name", "iso3", "city", "address"),
+  .cols_join = c("name", "iso3"),
   .method = "osa"
 )
 ```
@@ -509,118 +579,253 @@ test_that("join_data works", {
   expect_true(inherits(join_data, "function")) 
 })
 ```
+
+## HELP: split_block
+### Function
+```{r dev-split_block}
+.source = table_source[1:100, ]
+.target = table_target[1:999, ]
+.cols_match = c("name", "iso3", "city", "address")
+.char_block = c(2, 5)
+```
+
+
+```{r function-split_block}
+#' Split to Blocks
+#' 
+#' Description
+#' 
+#' @param .source 
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .target 
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
+#' @param .char_block 
+#' Character Block Size. Used to partition data.\cr
+#' - First element chunks the source data in ngram-blocks.\cr
+#' - Second element allows for characters in target below/above block size.
+#'
+#' @return
+#' A List
+#' 
+#' @noRd
+split_block <- function(.source, .target, .cols_match, .char_block) {
+  n__ <- b__ <- NULL
+  check_id(.source, .target)
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
+
+  t_ <- dplyr::mutate(target_, n__ = nchar(!!dplyr::sym(.cols_match[1])))
+  max_t_ <- max(t_$n__)
+  s_ <- source_ %>%
+    dplyr::mutate(
+      n__ = nchar(!!dplyr::sym(.cols_match[1])),
+      n__ = dplyr::if_else(n__ > max_t_, max_t_, n__)
+    ) %>%
+    dplyr::arrange(n__) %>%
+    dplyr::mutate(b__ = floor(n__ / .char_block[1])) %>%
+    dplyr::group_by(b__) %>%
+    dplyr::mutate(b__ = paste0(
+      stringi::stri_pad_left(dplyr::first(n__), 3, 0),
+      "-",
+      stringi::stri_pad_left(dplyr::last(n__), 3, 0)
+    )) %>%
+    dplyr::ungroup()
+  return(
+    list(
+      ls = split(dplyr::select(s_, -c(n__, b__)), s_$b__),
+      tt = t_
+    )
+  )
+}
+```
+
+### Example/Test
+```{r example-split_block}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols_match <- c("name", "iso3", "city", "address")
+char_block = c(25, 5)
+
+split_block(
+  .source = tab_source,
+  .target = tab_target,
+  .cols_match = cols_match,
+  .char_block = char_block
+)
+```
+  
+```{r tests-split_block}
+test_that("split_block works", {
+  expect_true(inherits(split_block, "function")) 
+})
+```
+
+## HELP: filter_block
+### Function
+```{r function-filter_block}
+#' Filter Target Dataframe for Block Sizes
+#' 
+#' Description
+#' 
+#' @param .block 
+#' A block as character string (names of ls element from split_block())
+#' @param .tab 
+#' Target table (tt element from split_block())
+#' @param .size 
+#' Second element of .char_block (3. Argument of split_block())
+#' @return 
+#' A Dataframe
+#' 
+#' @noRd
+filter_block <- function(.block, .tab, .size) {
+  n__ <- NULL
+  int_ <- as.integer(unlist(stringi::stri_split_fixed(.block, "-")))
+  min_ <- int_[1] - .size
+  max_ <- int_[2] + .size
+  if (is.infinite(.size)) {
+    return(.tab)
+  } else {
+    return(dplyr::filter(.tab, n__ %in% min_:max_))
+  }
+}
+```
+
+### Example/Test
+```{r example-filter_block}
+tab_source <- table_source[1:100, ]
+tab_target <- table_target[1:999, ]
+cols_match <- c("name", "iso3", "city", "address")
+char_block = c(25, 5)
+
+lblock <- split_block(
+  .source = tab_source,
+  .target = tab_target,
+  .cols_match = cols_match,
+  .char_block = char_block
+)
+
+filter_block(
+  .block = names(lblock$ls)[1],
+  .tab = lblock$tt,
+  .size = char_block[2]
+)
+```
+  
+```{r tests-filter_block}
+test_that("filter_block works", {
+  expect_true(inherits(filter_block, "function")) 
+})
+```
   
 
 ## MAIN: match_data
+### Function
 ```{r dev-match_data}
-.source = table_source[1:100, ]
-.target = table_target[1:999, ]
-.cols = c("name", "iso3", "city", "address")
-.join = c("name", "iso3")
-.method = "osa"
+.source <- bind_rows(
+  table_source[1:100, ],
+  mutate(table_source[1:10, ], id = paste0(id, "1"))
+)
+.target <- bind_rows(
+  table_target[1:999, ],
+  mutate(table_target[1:10, ], id = paste0(id, "2"))
+)
+.cols_match = c("name", "iso3", "city", "address")
+.cols_join = c("name", "iso3")
+.cols_exact = "iso3"
 .max_match = 10
-.min_sim = 0
-.progress = TRUE
-.must_match = c("iso3")
+.method = "osa"
+.verbose = TRUE
+.workers = future::availableCores()
 .char_block = c(2, 5)
-
 ```
 
-### Function
 ```{r function-match_data}
 #' Match Data
 #' 
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .cols 
-#' The column names to match as character vector
-#' @param .join
-#' Columns to match on
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
+#' @param .cols_join
+#' Columns to perfrom an exact match on, before fuzzy-matching.\cr
+#' (Matched IDs will be excluded from fuzzy-match)
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
-#' @param .min_sim 
-#' Minimum Similarity as defined by the chosen method
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
-#' @param .must_match Columns that must be matched perfectly
-#' @param .progress Should a progress bar be shown?
-#' See stringdist package
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .verbose 
+#' Print additional information?
 #' @param .char_block 
-#' Character Block Size
-#' First element chunks the source data in ngram blocks
-#' Second element allows for characters in target below/above block size
-#' @param .workers Number of cores
+#' Character Block Size. Used to partition data.\cr
+#' - First element chunks the source data in ngram-blocks.\cr
+#' - Second element allows for characters in target below/above block size.
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
+#' 
 #' @return A dataframe
 #' 
 #' @export
-match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
-                       .min_sim = .2, .method = "osa", .char_block = c(Inf, Inf), .progress = TRUE,
-                       .workers = future::availableCores()) {
-  id <- n__ <- b__ <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
+match_data <- function(
+  .source, .target, .cols_match, .cols_join = NULL, .cols_exact = NULL, 
+  .max_match = 10, .method = "osa", .verbose = TRUE, 
+  .workers = future::availableCores(), .char_block = c(Inf, Inf)
+  ) {
+  id <- id_s <- id_t <- add_s <- `_id_` <- all_s <- all_t <- NULL
   
   
   check_id(.source, .target)
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
   
-  if (!is.null(.join)) {
-    tab0_ <- join_data(.source, .target, .cols, .join)
-    s_ <- dplyr::filter(.source, !id %in% tab0_$id_s)
-    t_ <- dplyr::filter(.target, !id %in% tab0_$id_t)
+  if (!is.null(.cols_join)) {
+    tab0_ <- join_data(source_, target_, .cols_match, .cols_join)
+    s_ <- dplyr::filter(source_, !id %in% tab0_$id_s)
+    t_ <- dplyr::filter(target_, !id %in% tab0_$id_t)
   } else {
     tab0_ <- tibble::tibble(id_s = "", .rows = 0)
-    s_ <- .source
-    t_ <- .target
-  }
-  
-  s_ <- s_ %>%
-    dplyr::mutate(n__ = nchar(!!dplyr::sym(.cols[1]))) %>% 
-    dplyr::arrange(n__) %>%
-    dplyr::mutate(b__ = floor(n__ / .char_block[1])) %>%
-    dplyr::group_by(b__) %>%
-    dplyr::mutate(b__ = paste0(dplyr::first(n__), "-", dplyr::last(n__))) %>%
-    dplyr::ungroup()
-  ls_ <- split(dplyr::select(s_, -c(n__, b__)), s_$b__)
-  t_ <- dplyr::mutate(t_, n__ = nchar(!!dplyr::sym(.cols[1])))
-  
-  filter_block <- function(.block, .tab, .size) {
-    int_ <- as.integer(unlist(stringi::stri_split_fixed(.block, "-")))
-    min_ <- int_[1] - .size
-    max_ <- int_[2] + .size
-    if (is.infinite(.size)) {
-      return(.tab)
-    } else {
-      return(dplyr::filter(.tab, n__ %in% min_:max_))
-    }
-    
+    s_ <- source_
+    t_ <- target_
   }
 
+  tmp_ <- split_block(s_, t_, .cols_match, .char_block)
+  
   tab1_ <- purrr::imap_dfr(
-    .x = ls_,
+    .x = tmp_$ls,
     .f = ~ {
-      if (.progress) cat("\rCalculating Block:", .y, "     ")
+      if (.verbose) cat("\rCalculating Block:", .y, "     ")
       help_match_data(
         .source = .x,
-        .target = filter_block(.y, t_, .char_block[2]),
-        .cols = .cols,
-        .must_match = .must_match,
+        .target = filter_block(.block = .y, .tab = tmp_$tt, .size = .char_block[2]),
+        .cols_match = .cols_match,
+        .cols_exact = .cols_exact,
         .max_match = .max_match,
-        .min_sim = .min_sim,
         .method = .method,
-        .progress = .progress, 
+        .verbose = .verbose,
         .workers = .workers
       )
     }
   )
 
   out_ <- dplyr::bind_rows(tab0_, tab1_)
-  out_ <- out_[, c("id_s", "id_t", paste0("sim_", .cols))]
+  out_ <- out_[, c("id_s", "id_t", paste0("sim_", .cols_match))]
+  out_ %>%
+    dplyr::left_join(dplyr::select(source_, id_s = id, all_s = `_id_`), by = "id_s") %>%
+    dplyr::left_join(dplyr::select(target_, id_t = id, all_t = `_id_`), by = "id_t") %>%
+    dplyr::select(id_s, id_t, all_s, all_t, dplyr::everything())
   
 }
 ```
@@ -629,13 +834,16 @@ match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL
 ```{r example-match_data, eval=FALSE}
 tab_source <- table_source[1:100, ]
 tab_target <- table_target[1:999, ]
-cols <- c("name", "iso3", "city", "address")
-must <- "iso3"
+cols_match <- c("name", "iso3", "city", "address")
+cols_join  <- c("name", "iso3")
+cols_exact <- "iso3"
+
 match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = cols,
-  .must_match = must,
+  .cols_match = cols_match,
+  .cols_join = cols_join,
+  .cols_exact = cols_exact
 )
 ```
 
@@ -698,8 +906,8 @@ test_that("uniqueness_vec works", {
 ### Function
 
 ```{r dev-get_weights}
-.data <- table_source
-.cols <- c("name", "city", "address")
+.tab <- table_source
+.cols_match <- c("name", "city", "address")
 ```
 
 
@@ -708,20 +916,25 @@ test_that("uniqueness_vec works", {
 #' 
 #' Description
 #' 
-#' @param .data A Dataframe
-#' @param .cols columns
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
 #'
 #' @return A numeric vector
 #' 
 #' @export
-get_weights <- function(.data, .cols) {
+get_weights <- function(.tab, .cols_match) {
   . <- NULL
   purrr::map_dbl(
-    .x = stats::setNames(.cols, .cols), 
-    .f = ~ mean(uniqueness_vec(.data[[.x]]), na.rm = TRUE)
+    .x = stats::setNames(.cols_match, .cols_match), 
+    .f = ~ mean(uniqueness_vec(.tab[[.x]]), na.rm = TRUE)
     ) %>% `/`(sum(., na.rm = TRUE))
 }
 ```
+
+
+  
 
 
 ### Example Test
@@ -735,54 +948,9 @@ test_that("get_weights works", {
 })
 ```
   
-<!-- ## MAIN: uniqueness_data -->
-<!-- ```{r dev-uniqueness_data} -->
-<!-- .data <- table_source -->
-<!-- .cols <- c("name", "city", "address") -->
-<!-- .type <- "source" -->
-<!-- ``` -->
-
-<!-- ### Function -->
-<!-- ```{r function-uniqueness_data} -->
-<!-- #' Calculate Uniqueness of Data -->
-<!-- #'  -->
-<!-- #' Description -->
-<!-- #'  -->
-<!-- #' @param .data A Dataframe -->
-<!-- #' @param .cols Column as character vector -->
-<!-- #' @param .type either source or target -->
-<!-- #' -->
-<!-- #' @return A dataframe -->
-<!-- #'  -->
-<!-- #' @export -->
-<!-- uniqueness_data <- function(.data, .cols, .type = c("source", "target")) { -->
-<!--   id <- tmp <- NULL -->
-<!--   .dat <- tibble::as_tibble(.data) -->
-
-<!--   type_ <- match.arg(.type, c("source", "target")) -->
-<!--   type_ <- substr(type_, 1, 1) -->
-<!--   tab_ <- .data[, c("id", .cols)] %>% -->
-<!--     tidyr::unite(tmp, !dplyr::matches("^id$")) -->
-<!--   tab_[[paste0("uni_", type_)]] <- uniqueness_vec(tab_[["tmp"]]) -->
-<!--   tab_ <- dplyr::select(tab_, -tmp) -->
-<!--   colnames(tab_) <- c(paste0("id_", type_), paste0("uni_", type_)) -->
-<!--   return(tab_) -->
-<!-- } -->
-<!-- ``` -->
-
-<!-- ### Example/Test -->
-<!-- ```{r example-uniqueness_data, eval=FALSE} -->
-<!-- uniqueness_data(table_source[1:100, ], c("name", "iso3", "city", "address"), "source") -->
-<!-- ``` -->
-
-<!-- ```{r tests-uniqueness_data} -->
-<!-- test_that("uniqueness_data works", { -->
-<!--   expect_true(inherits(uniqueness_data, "function"))  -->
-<!-- }) -->
-<!-- ``` -->
 
 ## HELP: help_check_weights
-    
+### Function
 ```{r function-help_check_weights}
 #' Check Weights
 #'
@@ -792,16 +960,19 @@ test_that("get_weights works", {
 #' @return Error
 help_check_weights <- function(.weights = NULL, .cols = NULL) {
   if (!is.null(.weights)) {
-    nw_ <- sort(names(.weights)); nc_ <- sort(.cols)
-    lw_ <- length(nw_); lc_ <- length(nc_)
+    nw_ <- sort(names(.weights))
+    nc_ <- sort(.cols)
+    lw_ <- length(nw_)
+    lc_ <- length(nc_)
     
-    if (lw_ == 0) stop(".weights must be a named vector")
-    if (!lw_ == lc_) stop(".weights and .cols must have the same length")
-    if (!all(nw_ == nc_)) stop(".weights and .cols must have the same names")
+    if (lw_ == 0) stop(".weights must be a named vector", call. = FALSE)
+    if (!lw_ == lc_) stop(".weights and .cols must have the same length", call. = FALSE)
+    if (!all(nw_ == nc_)) stop(".weights and .cols must have the same names", call. = FALSE)
   }
 }
 ```
-  
+
+### Example/Test
 ```{r example-help_check_weights}
 # help_check_weights()
 ```
@@ -815,21 +986,28 @@ test_that("help_check_weights works", {
 
 ## MAIN: scores_data
 ```{r dev-scores_data}
-.matches <- match_data(
-  .source = table_source[1:100, ],
-  .target = table_target[1:999, ],
-  .cols = c("name", "iso3", "city", "address"),
-  .min_sim = .2,
-  .max_match = 10,
-  .must_match = "iso3",
-  .method = "osa", 
-  .progress = FALSE
+tab_source <- bind_rows(
+  table_source[1:100, ],
+  mutate(table_source[1:10, ], id = paste0(id, "1"))
 )
-.source <- table_source[1:100, ]
-.target <- table_target[1:999, ]
+tab_target <- bind_rows(
+  table_target[1:999, ],
+  mutate(table_target[1:10, ], id = paste0(id, "2"))
+)
+
+.matches <- match_data(
+  .source = tab_source,
+  .target = tab_target,
+  .cols_match = c("name", "iso3", "city", "address"),
+  .cols_exact = "iso3",
+  .verbose = FALSE
+)
+.source <- tab_source
+.target <- tab_target
+.cols_match = c("name", "iso3", "city", "address")
 .w_unique <- NULL
 .w_custom <- c(name = .6, city = .1, address = .3)
-.must_match = "iso3"
+.cols_exact = "iso3"
 ```
 
 ### Function
@@ -838,37 +1016,45 @@ test_that("help_check_weights works", {
 #' 
 #' Description
 #' 
-#' @param .matches Dataframe produced by match_data()
+#' @param .matches 
+#' Dataframe produced by match_data()
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .must_match Columns that must be matched perfectly
-#' @param .w_unique Weights calucalted by get_weights()
-#' @param .w_custom Custom weights
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
+#' @param .w_unique 
+#' Weights calculated by get_weights()
+#' @param .w_custom 
+#' A named numeric vector that matches the columns of .cols_match w/o the columns of .cols_exact
 #'
 #' @return A dataframe
 #' 
 #' @export
-scores_data <- function(.matches, .source, .target, .must_match = NULL, 
+scores_data <- function(.matches, .source, .target, .cols_match, .cols_exact = NULL, 
                         .w_unique = NULL, .w_custom = NULL) {
-  id_s <- id_t <- . <- NULL
+  id_s <- id_t <- . <- n_s <- add_t <- NULL
   
-  .matches <- tibble::as_tibble(.matches)
-  .source  <- tibble::as_tibble(.source)
-  .target  <- tibble::as_tibble(.target)
-  
-  cols_ <- colnames(.matches)
-  cols_ <- gsub("sim_", "", cols_[grepl("^sim_", cols_)])
-  cols_ <- cols_[!cols_ %in% .must_match]
+  check_id(.source, .target)
+  source_  <- prep_tables(.source, .cols_match)
+  target_  <- prep_tables(.target, .cols_match)
+  matches_ <- tibble::as_tibble(.matches)
+
+  # cols_ <- colnames(matches_)
+  # cols_ <- gsub("sim_", "", cols_[grepl("^sim_", cols_)])
+  cols_ <- .cols_match[!.cols_match %in% .cols_exact]
   
   if (!is.null(.w_unique)) {
     help_check_weights(.w_unique, cols_)
     wu_ <- .w_unique
   } else {
-    wu_ <- (get_weights(.source, cols_) + get_weights(.target, cols_)) / 2
+    wu_ <- (get_weights(source_, cols_) + get_weights(target_, cols_)) / 2
   }
   
   if (!is.null(.w_custom)) {
@@ -879,14 +1065,17 @@ scores_data <- function(.matches, .source, .target, .must_match = NULL,
     wc_ <- rep(NA_real_, length(cols_))
   }
 
-  mat_ <- as.matrix(.matches[, paste0("sim_", cols_)])
+  mat_ <- as.matrix(matches_[, paste0("sim_", cols_)])
   
-  .matches %>%
-    dplyr::select(id_s, id_t, dplyr::starts_with("sim_")) %>%
+  matches_ %>%
     dplyr::mutate(
-      mean_simple = rowMeans(mat_, na.rm = TRUE),
-      mean_weight = rowSums(mat_ * wu_, na.rm = TRUE),
-      mean_custom = rowSums(mat_ * wc_, na.rm = TRUE)
+      sms = rowMeans(mat_, na.rm = TRUE),
+      smw = rowSums(mat_ * wu_, na.rm = TRUE),
+      smc = rowSums(mat_ * wc_, na.rm = TRUE),
+      
+      sss = rowMeans(mat_ ^ 2, na.rm = TRUE),
+      ssw = rowSums(mat_  ^ 2 * wu_, na.rm = TRUE),
+      ssc = rowSums(mat_  ^ 2 * wc_, na.rm = TRUE),
     )
 }
 ```
@@ -895,20 +1084,24 @@ scores_data <- function(.matches, .source, .target, .must_match = NULL,
 ```{r example-scores_data, eval=FALSE}
 tab_source <- table_source[1:100, ]
 tab_target <- table_target[1:999, ]
-cols <- c("name", "iso3", "city", "address")
-must <- "iso3"
+cols_match <- c("name", "iso3", "city", "address")
+cols_exact <- "iso3"
+cols_join  <- c("name", "iso3")
 tab_match <- match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = cols,
-  .must_match = must,
+  .cols_match = cols_match,
+  .cols_exact = cols_exact,
+  .cols_join = cols_join,
+  .method = "soundex",
 )
 scores_data(
-  .matches = tab_match,
-  .source = tab_source,
-  .target = tab_target,
-  .must_match = must
-)
+  .matches = tab_match, 
+  .source = tab_source, 
+  .target = tab_target, 
+  .cols_match = cols_match,
+  .cols_exact = cols_exact
+  )
 ```
 
 ```{r tests-scores_data}
@@ -919,25 +1112,36 @@ test_that("scores_data works", {
 
 ## MAIN: dedup_data
 ```{r dev-dedup_data}
-tab_source <- table_source[1:100, ]
-tab_target <- table_target[1:999, ]
-cols <- c("name", "iso3", "city", "address")
-must <- "iso3"
+tab_source <- bind_rows(
+  table_source[1:100, ],
+  mutate(table_source[1:10, ], id = paste0(id, "1"))
+)
+tab_target <- bind_rows(
+  table_target[1:999, ],
+  mutate(table_target[1:10, ], id = paste0(id, "2"))
+)
+cols_match <- c("name", "iso3", "city", "address")
+cols_exact <- "iso3"
+cols_join  <- c("name", "iso3")
+
 tab_match <- match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = cols,
-  .must_match = must,
+  .cols_match = cols_match,
+  .cols_exact = cols_exact,
+  .cols_join = cols_join,
+  .method = "soundex",
 )
 .score <- scores_data(
   .matches = tab_match, 
-  .source = table_source, 
-  .target = table_target, 
-  .must_match = "iso3"
+  .source = tab_source, 
+  .target = tab_target, 
+  .cols_match = cols_match,
+  .cols_exact = cols_exact
   )
-.source <- table_source
-.target <- table_target
-.col <- "weight_mean"
+.source <- tab_source
+.target <- tab_target
+.col_score <- c("sms", "smw", "smc", "sss", "ssw", "ssc")
 ```
 
 ### Function
@@ -946,42 +1150,71 @@ tab_match <- match_data(
 #' 
 #' Description
 #' 
-#' @param .score Dataframe generated by scores_data()
+#' @param .score 
+#' Dataframe generated by scores_data()
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .col score column generated by scores_data()
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
+#' @param .col_score 
+#' Score column generated by scores_data().\cr
+#' Options are:\cr
+#' sms: Simple Mean (mean over all fuzzy columns)\cr
+#' smw: Weighted Mean (mean over all fuzzy columns, weighted by get_weights())\cr
+#' smc: Custom Mean (mean over all fuzzy columns, weighted custom weights)\cr
+#' sss: Simple Mean, squared (mean over all fuzzy columns, scores are squared)\cr
+#' ssw: Weighted Mean, squared (mean over all fuzzy columns, scores are squared before weighted by get_weights())\cr
+#' ssc: Custom Mean, squared (mean over all fuzzy columns, scores are squared before weighted custom weights)
 #'
 #' @return A dataframe
 #' 
+#' @importFrom rlang :=
+#' 
 #' @export
-dedup_data <- function(.score, .source, .target, .col = "mean_weight") {
-  id_s <- id_t <- name_s <- name_t <- NULL
-  .score  <- tibble::as_tibble(.score)
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
+dedup_data <- function(
+  .score, .source, .target, .cols_match,
+  .col_score = c("sms", "smw", "smc", "sss", "ssw", "ssc")
+  ) {
+  id_s <- id_t <- name_s <- name_t <- all_s <- all_t <- score <- 
+    `_id_` <- NULL
+  check_id(.source, .target)
+  
+  cols_score_ <- match.arg(.col_score, c("sms", "smw", "smc", "sss", "ssw", "ssc"))
+  
+  source_  <- prep_tables(.source, .cols_match)
+  target_  <- prep_tables(.target, .cols_match)
+  score_  <- tibble::as_tibble(.score)
   
   
-  col_s_ <- colnames(.source)
-  col_t_ <- colnames(.target)
+  col_s_ <- colnames(source_)[!colnames(source_) == "_id_"]
+  col_t_ <- colnames(target_)[!colnames(target_) == "_id_"]
+  
+  
   col_e_ <- col_s_[col_s_ %in% col_t_]
   col_e_ <- col_e_[!col_e_ == "id"]
   col_e_ <- unlist(purrr::map2(paste0(col_e_, "_s"), paste0(col_e_, "_t"), c))
   
-  tab_ <- .score %>%
-    dplyr::select(id_s, id_t, !!dplyr::sym(.col)) %>%
-    dplyr::arrange(dplyr::desc(!!dplyr::sym(.col))) %>%
-    dplyr::filter(!duplicated(id_t)) %>%
+  tab_ <- score_ %>%
+    dplyr::arrange(dplyr::desc(!!dplyr::sym(cols_score_))) %>%
+    dplyr::distinct(id_t, .keep_all = TRUE) %>%
     dplyr::distinct(id_s, .keep_all = TRUE) %>%
-    dplyr::full_join(.source, c("id_s" = "id"), FALSE, suffix = c("_s", "_t")) %>%
-    dplyr::left_join(.target, c("id_t" = "id"), FALSE, suffix = c("_s", "_t"))
+    dplyr::select(id_s, id_t, all_s, all_t, score := !!dplyr::sym(cols_score_)) %>%
+    dplyr::full_join(
+      y = dplyr::select(source_, -c(`_id_`)), 
+      by = c("id_s" = "id"), 
+      suffix = c("_s", "_t")
+      ) %>%
+    dplyr::full_join(
+      y = dplyr::select(target_, -c(`_id_`)), 
+      by = c("id_t" = "id"), 
+      suffix = c("_s", "_t")
+      )
   
-  tab_ <- tab_[, c("id_s", "id_t", .col, col_e_)]
-  colnames(tab_) <- c("id_s", "id_t", "score", col_e_)
-  return(tab_)
+  tab_[, c("id_s", "id_t", "all_s", "all_t", "score", col_e_)]
 }
 ```
 
@@ -989,31 +1222,186 @@ dedup_data <- function(.score, .source, .target, .col = "mean_weight") {
 ```{r example-dedup_data, eval=FALSE}
 tab_source <- table_source[1:100, ]
 tab_target <- table_target[1:999, ]
-cols <- c("name", "iso3", "city", "address")
-must <- "iso3"
+cols_match <- c("name", "iso3", "city", "address")
+cols_exact <- "iso3"
+cols_join  <- c("name", "iso3")
 tab_match <- match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = cols,
-  .must_match = must,
+  .cols_match = cols_match,
+  .cols_exact = cols_exact,
+  .cols_join = cols_join,
+  .method = "soundex"
 )
 tab_score <- scores_data(
-  .matches = tab_match,
-  .source = tab_source,
-  .target = tab_target,
-  .must_match = must
-)
+  .matches = tab_match, 
+  .source = tab_source, 
+  .target = tab_target, 
+  .cols_match = cols_match,
+  .cols_exact = cols_exact
+  )
 
 dedup_data(
   .score = tab_score, 
   .source = tab_source, 
-  .target = tab_target, 
+  .target = tab_target,
+  .cols_match = cols_match,
+  .col_score = "sms"
   )
 ```
 
 ```{r tests-dedup_data}
 test_that("dedup_data works", {
   expect_true(inherits(dedup_data, "function")) 
+})
+```
+
+## MAIN: match_complete
+### Function
+```{r dev-match_complete}
+.source = table_source[1:100, ]
+.target = table_target[1:999, ]
+.standardize = TRUE
+.cols_match = c("name", "iso3", "city", "address")
+.cols_join = c("name", "iso3")
+.cols_exact = "iso3"
+.max_match = 10
+.method = "osa"
+.verbose = TRUE
+.workers = future::availableCores()
+.char_block = c(2, 5)
+.w_unique = NULL
+.w_custom = NULL
+.col_score = c("sms", "smw", "smc", "sss", "ssw", "ssc")
+```
+
+
+```{r function-match_complete}
+#' Complete Match
+#' 
+#' Description
+#' 
+#' @param .source 
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .target 
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
+#' @param .cols_join
+#' Columns to perfrom an exact match on, before fuzzy-matching.\cr
+#' (Matched IDs will be excluded from fuzzy-match)
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
+#' @param .max_match 
+#' Maximum number of matches to return (Default = 10)
+#' @param .method 
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .verbose 
+#' Print additional information?
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
+#' @param .char_block 
+#' Character Block Size. Used to partition data.\cr
+#' - First element chunks the source data in ngram-blocks.\cr
+#' - Second element allows for characters in target below/above block size.
+#' @param .standardize 
+#' Perform String Standardization using standardize_data()?
+#' @param .w_unique 
+#' Weights calculated by get_weights()
+#' @param .w_custom 
+#' A named numeric vector that matches the columns of .cols_match w/o the columns of .cols_exact
+#' @param .col_score 
+#' Score column generated by scores_data().\cr
+#' Options are:\cr
+#' sms: Simple Mean (mean over all fuzzy columns)\cr
+#' smw: Weighted Mean (mean over all fuzzy columns, weighted by get_weights())\cr
+#' smc: Custom Mean (mean over all fuzzy columns, weighted custom weights)\cr
+#' sss: Simple Mean, squared (mean over all fuzzy columns, scores are squared)\cr
+#' ssw: Weighted Mean, squared (mean over all fuzzy columns, scores are squared before weighted by get_weights())\cr
+#' ssc: Custom Mean, squared (mean over all fuzzy columns, scores are squared before weighted custom weights)
+#'
+#' @return
+#' A dataframe
+#' 
+#' @export
+match_complete <- function(
+  .source, .target, .cols_match, .cols_join = NULL, .cols_exact = NULL, 
+  .max_match = 10, .method = "osa", .verbose = TRUE, 
+  .workers = future::availableCores(), .char_block = c(Inf, Inf), 
+  .standardize = TRUE, .w_unique = NULL, .w_custom = NULL, 
+  .col_score = c("sms", "smw", "smc", "sss", "ssw", "ssc")
+  ) {
+  check_id(.source, .target)
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
+  
+  cols_score_ <- match.arg(.col_score, c("sms", "smw", "smc", "sss", "ssw", "ssc"))
+
+  if (.standardize) {
+    source_ <- standardize_data(source_, .cols_match)
+    target_ <- standardize_data(target_, .cols_match)
+  }
+
+  match_ <- match_data(
+    .source = source_,
+    .target = target_,
+    .cols_match = .cols_match,
+    .cols_join = .cols_join,
+    .cols_exact = .cols_exact,
+    .max_match = .max_match,
+    .method = .method,
+    .verbose = .verbose,
+    .workers = .workers,
+    .char_block = .char_block
+  )
+  
+  score_ <- scores_data(
+    .matches = match_,
+    .source = source_,
+    .target = target_,
+    .cols_match = .cols_match,
+    .cols_exact = .cols_exact,
+    .w_unique = .w_unique,
+    .w_custom = .w_custom
+  )
+  
+  dedup_data(
+    .score = score_,
+    .source = source_,
+    .target = target_,
+    .col_score = cols_score_
+  )
+  
+}
+```
+
+### Example/Test
+```{r example-match_complete}
+match_complete(
+  .source = table_source[1:100, ],
+  .target = table_target[1:999, ],
+  .cols_match = c("name", "iso3", "city", "address"),
+  .cols_join = c("name", "iso3"),
+  .cols_exact = "iso3",
+  .max_match = 25,
+  .method = "soundex",
+  .verbose = TRUE,
+  .workers = 4,
+  .char_block = c(5, 5),
+  .standardize = TRUE,
+  .w_unique = NULL,
+  .w_custom = c(name = .7, city = .2, address = .1),
+  .col_score = "sms"
+)
+```
+  
+```{r tests-match_complete}
+test_that("match_complete works", {
+  expect_true(inherits(match_complete, "function")) 
 })
 ```
 

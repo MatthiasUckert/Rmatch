@@ -23,6 +23,9 @@ check_data <- function(.source, .target, .check = c("source", "all"), .html = TR
   name <- df <- check <- ind <- cum <- value <- s <- Matrix <- Source <-
     Target <- NULL
   
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   check_ <- match.arg(.check, c("source", "all"))
   
   lst_ids_ <- check_id(.source, .target, .error = FALSE)

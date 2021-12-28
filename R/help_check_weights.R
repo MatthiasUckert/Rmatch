@@ -11,11 +11,13 @@
 #' # help_check_weights()
 help_check_weights <- function(.weights = NULL, .cols = NULL) {
   if (!is.null(.weights)) {
-    nw_ <- sort(names(.weights)); nc_ <- sort(.cols)
-    lw_ <- length(nw_); lc_ <- length(nc_)
+    nw_ <- sort(names(.weights))
+    nc_ <- sort(.cols)
+    lw_ <- length(nw_)
+    lc_ <- length(nc_)
     
-    if (lw_ == 0) stop(".weights must be a named vector")
-    if (!lw_ == lc_) stop(".weights and .cols must have the same length")
-    if (!all(nw_ == nc_)) stop(".weights and .cols must have the same names")
+    if (lw_ == 0) stop(".weights must be a named vector", call. = FALSE)
+    if (!lw_ == lc_) stop(".weights and .cols must have the same length", call. = FALSE)
+    if (!all(nw_ == nc_)) stop(".weights and .cols must have the same names", call. = FALSE)
   }
 }

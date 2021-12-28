@@ -19,6 +19,9 @@
 check_nas <- function(.source, .target, .check = c("source", "all")) {
   check_ <- match.arg(.check, c("source", "all"))
   
+  .source <- tibble::as_tibble(.source)
+  .target <- tibble::as_tibble(.target)
+  
   cols_s_ <- stats::setNames(colnames(.source), paste0("s_", colnames(.source)))
   cols_t_ <- stats::setNames(colnames(.target), paste0("t_", colnames(.target)))
 

@@ -18,6 +18,9 @@
 make_unique <- function(.data, ..., .rem = c("all", "last")) {
   rem_ <- match.arg(.rem, c("all", "last"))
   tmp_ <- NULL
+  
+  .data <- tibble::as_tibble(.data)
+  
   vars_ <- dplyr::enquos(...)
   tab_ <- tibble::as_tibble(.data) %>%
     dplyr::mutate(tmp_ = paste0(!!!vars_))

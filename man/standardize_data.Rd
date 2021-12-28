@@ -4,12 +4,12 @@
 \alias{standardize_data}
 \title{Standardize Data}
 \usage{
-standardize_data(.data, .cols, .fun = NULL)
+standardize_data(.tab, .cols_match, .fun = NULL)
 }
 \arguments{
-\item{.data}{A dataframe}
+\item{.tab}{A dataframe (either the source or target dataframe)}
 
-\item{.cols}{Columns to standardize}
+\item{.cols_match}{A character vector of columns to perform fuzzy matching.}
 
 \item{.fun}{Function for standardization, if NULL standardize_str() is used}
 }

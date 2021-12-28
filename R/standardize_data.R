@@ -4,8 +4,10 @@
 #' 
 #' Description
 #' 
-#' @param .data A dataframe
-#' @param .cols Columns to standardize
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
 #' @param .fun Function for standardization, if NULL standardize_str() is used
 #'
 #' @return A dataframe
@@ -13,15 +15,15 @@
 #' @export
 #' @examples
 #' standardize_data(table_source, c("name", "iso3", "city", "address"))
-standardize_data <- function(.data, .cols, .fun = NULL) {
-  tab_ <- tibble::as_tibble(.data)
+standardize_data <- function(.tab, .cols_match, .fun = NULL) {
+  tab_ <- tibble::as_tibble(.tab)
   if (is.null(.fun)) {
     f_ <- standardize_str
   } else {
     f_ <- .fun
   }
   
-  for (i in .cols) {
+  for (i in .cols_match) {
     tab_[[i]] <- f_(tab_[[i]])
   }
   return(tab_)

@@ -4,20 +4,22 @@
 \alias{join_data}
 \title{Perform LeftJoin on Data}
 \usage{
-join_data(.source, .target, .cols, .join, .method = "osa")
+join_data(.source, .target, .cols_match, .cols_join, .method = "osa")
 }
 \arguments{
-\item{.source}{The Source Dataframe.
-Must contain a unique column id and the columns you want to match on}
+\item{.source}{The Source Dataframe.\cr
+(Must contain a unique column id and the columns you want to match on)}
 
-\item{.target}{The Target Dataframe.
-Must contain a unique column id and the columns you want to match on}
+\item{.target}{The Target Dataframe.\cr
+(Must contain a unique column id and the columns you want to match on)}
 
-\item{.cols}{The column names to match as character vector}
+\item{.cols_match}{A character vector of columns to perform fuzzy matching.}
 
-\item{.join}{Columns to match on}
+\item{.cols_join}{Columns to perfrom an exact match on, before fuzzy-matching.\cr
+(Matched IDs will be excluded from fuzzy-match)}
 
-\item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"}
+\item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+See: stringdist-metrics {stringdist}}
 }
 \value{
 A Dataframe
@@ -29,8 +31,8 @@ Description
 join_data(
   .source = table_source,
   .target = table_target,
-  .cols = c("name", "iso3", "city", "address"),
-  .join = c("name", "iso3"),
+  .cols_match = c("name", "iso3", "city", "address"),
+  .cols_join = c("name", "iso3"),
   .method = "osa"
 )
 }

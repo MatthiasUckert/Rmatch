@@ -4,16 +4,23 @@
 #' 
 #' Description
 #' 
-#' @param .matches Dataframe produced by match_data()
+#' @param .matches 
+#' Dataframe produced by match_data()
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .must_match Columns that must be matched perfectly
-#' @param .w_unique Weights calucalted by get_weights()
-#' @param .w_custom Custom weights
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
+#' @param .w_unique 
+#' Weights calculated by get_weights()
+#' @param .w_custom 
+#' A named numeric vector that matches the columns of .cols_match w/o the columns of .cols_exact
 #'
 #' @return A dataframe
 #' 
@@ -21,37 +28,42 @@
 #' @examples
 #' tab_source <- table_source[1:100, ]
 #' tab_target <- table_target[1:999, ]
-#' cols <- c("name", "iso3", "city", "address")
-#' must <- "iso3"
+#' cols_match <- c("name", "iso3", "city", "address")
+#' cols_exact <- "iso3"
+#' cols_join  <- c("name", "iso3")
 #' tab_match <- match_data(
 #'   .source = tab_source,
 #'   .target = tab_target,
-#'   .cols = cols,
-#'   .must_match = must,
+#'   .cols_match = cols_match,
+#'   .cols_exact = cols_exact,
+#'   .cols_join = cols_join,
+#'   .method = "soundex",
 #' )
 #' scores_data(
-#'   .matches = tab_match,
-#'   .source = tab_source,
-#'   .target = tab_target,
-#'   .must_match = must
-#' )
-scores_data <- function(.matches, .source, .target, .must_match = NULL, 
+#'   .matches = tab_match, 
+#'   .source = tab_source, 
+#'   .target = tab_target, 
+#'   .cols_match = cols_match,
+#'   .cols_exact = cols_exact
+#'   )
+scores_data <- function(.matches, .source, .target, .cols_match, .cols_exact = NULL, 
                         .w_unique = NULL, .w_custom = NULL) {
-  id_s <- id_t <- . <- NULL
+  id_s <- id_t <- . <- n_s <- add_t <- NULL
   
-  .matches <- tibble::as_tibble(.matches)
-  .source  <- tibble::as_tibble(.source)
-  .target  <- tibble::as_tibble(.target)
-  
-  cols_ <- colnames(.matches)
-  cols_ <- gsub("sim_", "", cols_[grepl("^sim_", cols_)])
-  cols_ <- cols_[!cols_ %in% .must_match]
+  check_id(.source, .target)
+  source_  <- prep_tables(.source, .cols_match)
+  target_  <- prep_tables(.target, .cols_match)
+  matches_ <- tibble::as_tibble(.matches)
+
+  # cols_ <- colnames(matches_)
+  # cols_ <- gsub("sim_", "", cols_[grepl("^sim_", cols_)])
+  cols_ <- .cols_match[!.cols_match %in% .cols_exact]
   
   if (!is.null(.w_unique)) {
     help_check_weights(.w_unique, cols_)
     wu_ <- .w_unique
   } else {
-    wu_ <- (get_weights(.source, cols_) + get_weights(.target, cols_)) / 2
+    wu_ <- (get_weights(source_, cols_) + get_weights(target_, cols_)) / 2
   }
   
   if (!is.null(.w_custom)) {
@@ -62,13 +74,16 @@ scores_data <- function(.matches, .source, .target, .must_match = NULL,
     wc_ <- rep(NA_real_, length(cols_))
   }
 
-  mat_ <- as.matrix(.matches[, paste0("sim_", cols_)])
+  mat_ <- as.matrix(matches_[, paste0("sim_", cols_)])
   
-  .matches %>%
-    dplyr::select(id_s, id_t, dplyr::starts_with("sim_")) %>%
+  matches_ %>%
     dplyr::mutate(
-      mean_simple = rowMeans(mat_, na.rm = TRUE),
-      mean_weight = rowSums(mat_ * wu_, na.rm = TRUE),
-      mean_custom = rowSums(mat_ * wc_, na.rm = TRUE)
+      sms = rowMeans(mat_, na.rm = TRUE),
+      smw = rowSums(mat_ * wu_, na.rm = TRUE),
+      smc = rowSums(mat_ * wc_, na.rm = TRUE),
+      
+      sss = rowMeans(mat_ ^ 2, na.rm = TRUE),
+      ssw = rowSums(mat_  ^ 2 * wu_, na.rm = TRUE),
+      ssc = rowSums(mat_  ^ 2 * wc_, na.rm = TRUE),
     )
 }

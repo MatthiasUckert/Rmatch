@@ -5,21 +5,20 @@
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .col 
-#' The column name to match as a string
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
-#' @param .min_sim 
-#' Minimum Similarity as defined by the chosen method
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
-#' See stringdist package
-#' @param .workers Number of cores
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
 #'
 #' @return A Dataframe
 #' @noRd
@@ -27,46 +26,43 @@
 #' match_col(
 #'   .source = table_source[1:100, ],
 #'   .target = table_target[1:999, ],
-#'   .col = "name",
-#'   .max_match = 10,
-#'   .min_sim = .2,
-#'   .method = "osa"
+#'   .cols_match = c("name", "iso3", "city", "address")
 #' )
-match_col <- function(.source, .target, .col, .max_match = 10, 
-                      .min_sim = .2, .method = "osa", .workers = future::availableCores()) {
-  V1 <- value <- id <- name <- id_t <- sim <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
+match_col <- function(
+  .source, .target, .cols_match, .max_match = 10, .method = "osa", 
+  .workers = future::availableCores()
+  ) {
   
+  V1 <- value <- id <- name <- id_t <- sim <- NULL
   
   check_id(.source, .target)
   
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
+  
   method_ <- match.arg(
     arg = .method,
-    choices = c(
-      "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine",
-      "jaccard", "jw", "soundex"
-    )
+    choices = c("osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex")
   )
   
   tab_ <- stringdist::stringsimmatrix(
-    a = .source[[.col]],
-    b = .target[[.col]],
+    a = source_[[.cols_match[1]]],
+    b = target_[[.cols_match[1]]],
     method = method_,
     nthread = .workers
   ) %>%
     tibble::as_tibble() %>%
     dplyr::mutate(id = dplyr::row_number(), .before = V1) %>%
     tidyr::pivot_longer(!dplyr::matches("id")) %>%
-    dplyr::filter(value >= .min_sim) %>%
     dplyr::group_by(id) %>%
     dplyr::slice_max(order_by = value, n = .max_match) %>%
     dplyr::ungroup() %>%
     dplyr::rename(id_s = id, id_t = name) %>%
     dplyr::mutate(id_t = as.integer(gsub("V", "", id_t, fixed = TRUE))) %>%
     suppressWarnings()
-  tab_[["id_s"]] <- .source[["id"]][tab_[["id_s"]]]
-  tab_[["id_t"]] <- .target[["id"]][tab_[["id_t"]]]
-  colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .col))
+  
+  tab_[["id_s"]] <- source_[["id"]][tab_[["id_s"]]]
+  tab_[["id_t"]] <- target_[["id"]][tab_[["id_t"]]]
+  colnames(tab_) <- c("id_s", "id_t", paste0("sim_", .cols_match[1]))
   return(tab_)
 }

@@ -7,44 +7,45 @@
 match_data(
   .source,
   .target,
-  .cols,
-  .join = NULL,
-  .must_match = NULL,
+  .cols_match,
+  .cols_join = NULL,
+  .cols_exact = NULL,
   .max_match = 10,
-  .min_sim = 0.2,
   .method = "osa",
-  .char_block = c(Inf, Inf),
-  .progress = TRUE,
-  .workers = future::availableCores()
+  .verbose = TRUE,
+  .workers = future::availableCores(),
+  .char_block = c(Inf, Inf)
 )
 }
 \arguments{
-\item{.source}{The Source Dataframe.
-Must contain a unique column id and the columns you want to match on}
+\item{.source}{The Source Dataframe.\cr
+(Must contain a unique column id and the columns you want to match on)}
 
-\item{.target}{The Target Dataframe.
-Must contain a unique column id and the columns you want to match on}
+\item{.target}{The Target Dataframe.\cr
+(Must contain a unique column id and the columns you want to match on)}
 
-\item{.cols}{The column names to match as character vector}
+\item{.cols_match}{A character vector of columns to perform fuzzy matching.}
 
-\item{.join}{Columns to match on}
+\item{.cols_join}{Columns to perfrom an exact match on, before fuzzy-matching.\cr
+(Matched IDs will be excluded from fuzzy-match)}
 
-\item{.must_match}{Columns that must be matched perfectly}
+\item{.cols_exact}{Columns that must be matched perfectly.\cr
+(Data will be partitioned using those columns)}
 
 \item{.max_match}{Maximum number of matches to return (Default = 10)}
 
-\item{.min_sim}{Minimum Similarity as defined by the chosen method}
+\item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+See: stringdist-metrics {stringdist}}
 
-\item{.method}{One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"}
+\item{.verbose}{Print additional information?}
 
-\item{.char_block}{Character Block Size
-First element chunks the source data in ngram blocks
-Second element allows for characters in target below/above block size}
+\item{.workers}{Number of cores to utilize (Default all cores determined by future::availableCores())}
 
-\item{.progress}{Should a progress bar be shown?
-See stringdist package}
-
-\item{.workers}{Number of cores}
+\item{.char_block}{Character Block Size. Used to partition data.\cr
+\itemize{
+\item First element chunks the source data in ngram-blocks.\cr
+\item Second element allows for characters in target below/above block size.
+}}
 }
 \value{
 A dataframe
@@ -55,12 +56,15 @@ Description
 \examples{
 tab_source <- table_source[1:100, ]
 tab_target <- table_target[1:999, ]
-cols <- c("name", "iso3", "city", "address")
-must <- "iso3"
+cols_match <- c("name", "iso3", "city", "address")
+cols_join  <- c("name", "iso3")
+cols_exact <- "iso3"
+
 match_data(
   .source = tab_source,
   .target = tab_target,
-  .cols = cols,
-  .must_match = must,
+  .cols_match = cols_match,
+  .cols_join = cols_join,
+  .cols_exact = cols_exact
 )
 }

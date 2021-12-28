@@ -5,20 +5,20 @@
 \title{Extract Legal Forms}
 \usage{
 extract_legal_form(
-  .data,
+  .tab,
   .col,
   .legal_forms = data.frame(),
   .workers = future::availableCores()
 )
 }
 \arguments{
-\item{.data}{A dataframe}
+\item{.tab}{A dataframe (either the source or target dataframe)}
 
 \item{.col}{The column with firm names}
 
 \item{.legal_forms}{A dataframe with legal forms}
 
-\item{.workers}{Number of cores}
+\item{.workers}{Number of cores to utilize (Default all cores determined by future::availableCores())}
 }
 \value{
 A dataframe

@@ -5,23 +5,25 @@
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .cols 
-#' The column names to match as character vector
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
-#' @param .min_sim 
-#' Minimum Similarity as defined by the chosen method
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
-#' @param .must_match Columns that must be matched perfectly
-#' @param .progress Should a progress bar be shown?
-#' See stringdist package
-#' @param .workers Number of cores
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .verbose 
+#' Print additional information?
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
 #' 
 #' @return A Dataframe
 #' 
@@ -30,37 +32,41 @@
 #' help_match_data(
 #'   .source = table_source[1:100, ], 
 #'   .target = table_target[1:999, ], 
-#'   .cols = c("name", "iso3", "city"), 
-#'   .max_match = 10, 
-#'   .min_sim = .2, 
-#'   .must_match = "iso3",
+#'   .cols_match = c("name", "iso3", "city", "address"),
+#'   .cols_exact = NULL,
+#'   .max_match = 10,
 #'   .method = "osa",
-#'   .progress = TRUE
+#'   .verbose = TRUE,
+#'   .workers = 4
 #'   )
-help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_match = 10,
-                            .min_sim = .2, .method = "osa", .progress = TRUE,
-                            .workers = future::availableCores()) {
+help_match_data <- function(
+  .source, .target, .cols_match, .cols_exact = NULL, .max_match = 10,
+  .method = "osa", .verbose = TRUE, .workers = future::availableCores()
+  ) {
+  
   sim <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
-
+  
   check_id(.source, .target)
+  
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
 
-  if (!is.null(.must_match)) {
-    vs_ <- tidyr::unite(.source[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    ls_ <- split(.source, vs_)
+  
+  if (!is.null(.cols_exact)) {
+    vs_ <- tidyr::unite(source_[, .cols_exact], "tmp", dplyr::everything())[["tmp"]]
+    ls_ <- split(source_, vs_)
 
-    vt_ <- tidyr::unite(.target[, .must_match], "tmp", dplyr::everything())[["tmp"]]
-    lt_ <- split(.target, vt_)
+    vt_ <- tidyr::unite(target_[, .cols_exact], "tmp", dplyr::everything())[["tmp"]]
+    lt_ <- split(target_, vt_)
 
     lt_ <- lt_[names(lt_) %in% names(ls_)]
     ls_ <- ls_[names(lt_)]
   } else {
-    ls_ <- list(.source)
-    lt_ <- list(.target)
+    ls_ <- list(source_)
+    lt_ <- list(target_)
   }
 
-  if (.progress) {
+  if (.verbose) {
     pb <- progress::progress_bar$new(
       total = length(ls_),
       clear = FALSE, show_after = 1
@@ -70,23 +76,27 @@ help_match_data <- function(.source, .target, .cols, .must_match = NULL, .max_ma
     .x = ls_,
     .y = lt_,
     .f = ~ {
-      if (.progress) pb$tick()
+      if (.verbose) pb$tick()
       tab_ <- match_col(
         .source = .x,
         .target = .y,
-        .col = .cols[1],
+        .cols_match = .cols_match,
         .max_match = .max_match,
-        .min_sim = .min_sim,
         .method = .method,
         .workers = .workers
       )
 
-      if (length(.cols) > 1) {
+      if (length(.cols_match) > 1) {
         s_ <- dplyr::left_join(tab_, .x, by = c("id_s" = "id"))
         t_ <- dplyr::left_join(tab_, .y, by = c("id_t" = "id"))
 
-        for (i in 2:length(.cols)) {
-          tab_[[paste0("sim_", .cols[i])]] <- stringdist::stringsim(s_[[.cols[i]]], t_[[.cols[i]]], .method)
+        for (i in 2:length(.cols_match)) {
+          cols_sim_ <- paste0("sim_", .cols_match[i])
+          tab_[[cols_sim_]] <- stringdist::stringsim(
+            a = s_[[.cols_match[i]]], 
+            b = t_[[.cols_match[i]]], 
+            method = .method
+            )
         }
       }
       return(tab_)

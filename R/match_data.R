@@ -5,104 +5,96 @@
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .cols 
-#' The column names to match as character vector
-#' @param .join
-#' Columns to match on
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching. 
+#' @param .cols_join
+#' Columns to perfrom an exact match on, before fuzzy-matching.\cr
+#' (Matched IDs will be excluded from fuzzy-match)
+#' @param .cols_exact 
+#' Columns that must be matched perfectly.\cr
+#' (Data will be partitioned using those columns)
 #' @param .max_match 
 #' Maximum number of matches to return (Default = 10)
-#' @param .min_sim 
-#' Minimum Similarity as defined by the chosen method
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
-#' @param .must_match Columns that must be matched perfectly
-#' @param .progress Should a progress bar be shown?
-#' See stringdist package
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
+#' @param .verbose 
+#' Print additional information?
 #' @param .char_block 
-#' Character Block Size
-#' First element chunks the source data in ngram blocks
-#' Second element allows for characters in target below/above block size
-#' @param .workers Number of cores
+#' Character Block Size. Used to partition data.\cr
+#' - First element chunks the source data in ngram-blocks.\cr
+#' - Second element allows for characters in target below/above block size.
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
+#' 
 #' @return A dataframe
 #' 
 #' @export
 #' @examples
 #' tab_source <- table_source[1:100, ]
 #' tab_target <- table_target[1:999, ]
-#' cols <- c("name", "iso3", "city", "address")
-#' must <- "iso3"
+#' cols_match <- c("name", "iso3", "city", "address")
+#' cols_join  <- c("name", "iso3")
+#' cols_exact <- "iso3"
+#' 
 #' match_data(
 #'   .source = tab_source,
 #'   .target = tab_target,
-#'   .cols = cols,
-#'   .must_match = must,
+#'   .cols_match = cols_match,
+#'   .cols_join = cols_join,
+#'   .cols_exact = cols_exact
 #' )
-match_data <- function(.source, .target, .cols, .join = NULL, .must_match = NULL, .max_match = 10,
-                       .min_sim = .2, .method = "osa", .char_block = c(Inf, Inf), .progress = TRUE,
-                       .workers = future::availableCores()) {
-  id <- n__ <- b__ <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
+match_data <- function(
+  .source, .target, .cols_match, .cols_join = NULL, .cols_exact = NULL, 
+  .max_match = 10, .method = "osa", .verbose = TRUE, 
+  .workers = future::availableCores(), .char_block = c(Inf, Inf)
+  ) {
+  id <- id_s <- id_t <- add_s <- `_id_` <- all_s <- all_t <- NULL
   
   
   check_id(.source, .target)
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
   
-  if (!is.null(.join)) {
-    tab0_ <- join_data(.source, .target, .cols, .join)
-    s_ <- dplyr::filter(.source, !id %in% tab0_$id_s)
-    t_ <- dplyr::filter(.target, !id %in% tab0_$id_t)
+  if (!is.null(.cols_join)) {
+    tab0_ <- join_data(source_, target_, .cols_match, .cols_join)
+    s_ <- dplyr::filter(source_, !id %in% tab0_$id_s)
+    t_ <- dplyr::filter(target_, !id %in% tab0_$id_t)
   } else {
     tab0_ <- tibble::tibble(id_s = "", .rows = 0)
-    s_ <- .source
-    t_ <- .target
-  }
-  
-  s_ <- s_ %>%
-    dplyr::mutate(n__ = nchar(!!dplyr::sym(.cols[1]))) %>% 
-    dplyr::arrange(n__) %>%
-    dplyr::mutate(b__ = floor(n__ / .char_block[1])) %>%
-    dplyr::group_by(b__) %>%
-    dplyr::mutate(b__ = paste0(dplyr::first(n__), "-", dplyr::last(n__))) %>%
-    dplyr::ungroup()
-  ls_ <- split(dplyr::select(s_, -c(n__, b__)), s_$b__)
-  t_ <- dplyr::mutate(t_, n__ = nchar(!!dplyr::sym(.cols[1])))
-  
-  filter_block <- function(.block, .tab, .size) {
-    int_ <- as.integer(unlist(stringi::stri_split_fixed(.block, "-")))
-    min_ <- int_[1] - .size
-    max_ <- int_[2] + .size
-    if (is.infinite(.size)) {
-      return(.tab)
-    } else {
-      return(dplyr::filter(.tab, n__ %in% min_:max_))
-    }
-    
+    s_ <- source_
+    t_ <- target_
   }
 
+  tmp_ <- split_block(s_, t_, .cols_match, .char_block)
+  
   tab1_ <- purrr::imap_dfr(
-    .x = ls_,
+    .x = tmp_$ls,
     .f = ~ {
-      if (.progress) cat("\rCalculating Block:", .y, "     ")
+      if (.verbose) cat("\rCalculating Block:", .y, "     ")
       help_match_data(
         .source = .x,
-        .target = filter_block(.y, t_, .char_block[2]),
-        .cols = .cols,
-        .must_match = .must_match,
+        .target = filter_block(.block = .y, .tab = tmp_$tt, .size = .char_block[2]),
+        .cols_match = .cols_match,
+        .cols_exact = .cols_exact,
         .max_match = .max_match,
-        .min_sim = .min_sim,
         .method = .method,
-        .progress = .progress, 
+        .verbose = .verbose,
         .workers = .workers
       )
     }
   )
 
   out_ <- dplyr::bind_rows(tab0_, tab1_)
-  out_ <- out_[, c("id_s", "id_t", paste0("sim_", .cols))]
+  out_ <- out_[, c("id_s", "id_t", paste0("sim_", .cols_match))]
+  out_ %>%
+    dplyr::left_join(dplyr::select(source_, id_s = id, all_s = `_id_`), by = "id_s") %>%
+    dplyr::left_join(dplyr::select(target_, id_t = id, all_t = `_id_`), by = "id_t") %>%
+    dplyr::select(id_s, id_t, all_s, all_t, dplyr::everything())
   
 }

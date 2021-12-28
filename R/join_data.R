@@ -5,17 +5,19 @@
 #' Description
 #' 
 #' @param .source 
-#' The Source Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
+#' The Source Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
 #' @param .target 
-#' The Target Dataframe. 
-#' Must contain a unique column id and the columns you want to match on
-#' @param .cols 
-#' The column names to match as character vector
-#' @param .join
-#' Columns to match on
+#' The Target Dataframe.\cr
+#' (Must contain a unique column id and the columns you want to match on)
+#' @param .cols_match 
+#' A character vector of columns to perform fuzzy matching.  
+#' @param .cols_join
+#' Columns to perfrom an exact match on, before fuzzy-matching.\cr
+#' (Matched IDs will be excluded from fuzzy-match)
 #' @param .method 
-#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex"
+#' One of "osa", "lv", "dl", "hamming", "lcs", "qgram", "cosine", "jaccard", "jw", "soundex".\cr
+#' See: stringdist-metrics {stringdist}
 #' @return A Dataframe
 #' 
 #' @export
@@ -23,27 +25,27 @@
 #' join_data(
 #'   .source = table_source,
 #'   .target = table_target,
-#'   .cols = c("name", "iso3", "city", "address"),
-#'   .join = c("name", "iso3"),
+#'   .cols_match = c("name", "iso3", "city", "address"),
+#'   .cols_join = c("name", "iso3"),
 #'   .method = "osa"
 #' )
-join_data <- function(.source, .target, .cols, .join, .method = "osa") {
+join_data <- function(.source, .target, .cols_match, .cols_join, .method = "osa") {
   id_s <- id_t <- NULL
-  .source <- tibble::as_tibble(.source)
-  .target <- tibble::as_tibble(.target)
   
   check_id(.source, .target)
+  source_ <- prep_tables(.source, .cols_match)
+  target_ <- prep_tables(.target, .cols_match)
   
-  s_ <- .source[, c("id", .join)]
-  t_ <- .target[, c("id", .join)]
-  non_ <- .cols[!.cols %in% .join]
+  s_ <- source_[, c("id", .cols_join)]
+  t_ <- target_[, c("id", .cols_join)]
+  non_ <- .cols_match[!.cols_match %in% .cols_join]
 
-  tab_ <- dplyr::inner_join(s_, t_, by = .join, suffix = c("_s", "_t")) %>%
+  tab_ <- dplyr::inner_join(s_, t_, by = .cols_join, suffix = c("_s", "_t")) %>%
     dplyr::mutate(
       dplyr::across(!dplyr::matches("^id_s$|^id_t$"), ~1)
     ) %>%
     dplyr::select(id_s, id_t, dplyr::everything()) %>%
-    `colnames<-`(c("id_s", "id_t", paste0("sim_", .join)))
+    `colnames<-`(c("id_s", "id_t", paste0("sim_", .cols_join)))
 
   s_ <- dplyr::left_join(tab_, .source[, c("id", non_)], by = c("id_s" = "id"))
   t_ <- dplyr::left_join(tab_, .target[, c("id", non_)], by = c("id_t" = "id"))

@@ -14,6 +14,8 @@
 #' filter_duplicates(table_source, name)
 filter_duplicates <- function(.data, ...) {
   tmp_ <- NULL
+  .data <- tibble::as_tibble(.data)
+  
   vars_ <- dplyr::enquos(...)
   tibble::as_tibble(.data) %>%
     dplyr::mutate(tmp_ = paste0(!!!vars_)) %>%

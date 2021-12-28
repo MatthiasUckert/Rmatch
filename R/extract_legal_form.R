@@ -4,10 +4,12 @@
 #' 
 #' Description
 #' 
-#' @param .data A dataframe
+#' @param .tab 
+#' A dataframe (either the source or target dataframe)
 #' @param .col The column with firm names
 #' @param .legal_forms A dataframe with legal forms
-#' @param .workers Number of cores
+#' @param .workers 
+#' Number of cores to utilize (Default all cores determined by future::availableCores())
 #'
 #' @return A dataframe
 #' 
@@ -16,10 +18,10 @@
 #' @export
 #' @examples
 #' extract_legal_form(table_source[1:100, ], "name", .workers = 1)
-extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
+extract_legal_form <- function(.tab, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
   tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
   
-  .data <- tibble::as_tibble(.data)
+  .tab <- tibble::as_tibble(.tab)
   
   if (nrow(.legal_forms) == 0) {
     tab_lf_ <- get("legal_form_all")
@@ -27,12 +29,12 @@ extract_legal_form <- function(.data, .col, .legal_forms = data.frame(), .worker
     tab_lf_ <- .legal_forms
   }
 
-  tab_ <- standardize_data(.data, .col)
+  tab_ <- standardize_data(.tab, .col)
   lf_ <- unique(tab_lf_[["legal_form_orig"]])
   nm_ <- tab_[[.col]]
 
   f_ <- carrier::crate(function(.lf, .nm) which(endsWith(.nm, paste0(" ", .lf))))
-  future::plan("multisession", workers = 6)
+  future::plan("multisession", workers = .workers)
   lf_ext_ <- furrr::future_map(
     .x = purrr::set_names(lf_, lf_),
     .f = ~ f_(.x, nm_),

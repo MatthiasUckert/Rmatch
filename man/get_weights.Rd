@@ -4,12 +4,12 @@
 \alias{get_weights}
 \title{Get Weights}
 \usage{
-get_weights(.data, .cols)
+get_weights(.tab, .cols_match)
 }
 \arguments{
-\item{.data}{A Dataframe}
+\item{.tab}{A dataframe (either the source or target dataframe)}
 
-\item{.cols}{columns}
+\item{.cols_match}{A character vector of columns to perform fuzzy matching.}
 }
 \value{
 A numeric vector
