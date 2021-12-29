@@ -83,7 +83,7 @@ extract_legal_form <- function(
     dplyr::relocate(lf_orig, .after = !!dplyr::sym(.col_name)) %>%
     dplyr::mutate(
       !!dplyr::sym(paste0(.col_name, "_adj")) := trimws(
-        stringi::stri_replace_last_fixed(name, lf_orig, "")
+        stringi::stri_replace_last_fixed(!!dplyr::sym(.col_name), lf_orig, "")
       ),
       .after = !!dplyr::sym(.col_name)
     ) %>%
