@@ -65,7 +65,7 @@ dedup_data <- function(
   .col_score = c("sms", "smw", "smc", "sss", "ssw", "ssc")
   ) {
   id_s <- id_t <- name_s <- name_t <- all_s <- all_t <- score <- 
-    `_id_` <- len_s <- len_t <- n_s <- m_t <- sms <- smw <- sms <- sss <- 
+    `_id_` <- len_s <- len_t <- n_s <- n_t <- sms <- smw <- smc <- sss <- 
     ssw <- ssc <- NULL
   check_id(.source, .target)
   
