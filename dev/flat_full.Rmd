@@ -1252,8 +1252,6 @@ dedup_data <- function(
     dplyr::slice_max(!!dplyr::sym(cols_score_)) %>%
     dplyr::mutate(n_s = dplyr::n()) %>%
     dplyr::ungroup() %>%
-    dplyr::distinct(id_t, .keep_all = TRUE) %>%
-    dplyr::distinct(id_s, .keep_all = TRUE) %>%
     dplyr::left_join(
       y = dplyr::select(source_, -c(`_id_`)),
       by = c("id_s" = "id"),
