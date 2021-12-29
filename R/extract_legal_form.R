@@ -6,8 +6,12 @@
 #' 
 #' @param .tab 
 #' A dataframe (either the source or target dataframe)
-#' @param .col The column with firm names
-#' @param .legal_forms A dataframe with legal forms
+#' @param .col_name 
+#' The column with firm names
+#' @param .col_country 
+#' Optionally, a column with iso3 country codes
+#' @param .legal_forms 
+#' A dataframe with legal forms
 #' @param .workers 
 #' Number of cores to utilize (Default all cores determined by future::availableCores())
 #'
@@ -17,9 +21,18 @@
 #' 
 #' @export
 #' @examples
-#' extract_legal_form(table_source[1:100, ], "name", .workers = 1)
-extract_legal_form <- function(.tab, .col, .legal_forms = data.frame(), .workers = future::availableCores()) {
-  tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- NULL
+#' extract_legal_form(
+#'   .tab = table_source[1:100, ], 
+#'   .col_name = "name", 
+#'   .col_country = "iso3",
+#'   .workers = 1
+#'   )
+extract_legal_form <- function(
+  .tab, .col_name, .col_country = NULL, .legal_forms = data.frame(), 
+  .workers = future::availableCores()
+  ) {
+  tmp <- legal_form_orig <- legal_form_stand <- legal_form <- name <- lf_stand <-
+    lf_orig <- NULL
   
   .tab <- tibble::as_tibble(.tab)
   
@@ -28,10 +41,20 @@ extract_legal_form <- function(.tab, .col, .legal_forms = data.frame(), .workers
   } else {
     tab_lf_ <- .legal_forms
   }
+  
+  if (is.null(.col_country)) {
+    tab_lf_ <- tab_lf_ %>%
+      dplyr::distinct(legal_form_orig, legal_form_stand) %>%
+      dplyr::distinct(legal_form_orig, .keep_all = TRUE)
+    join_by_ <- "legal_form_orig"
+  } else {
+    colnames(tab_lf_) <- c(.col_country, "legal_form_orig", "legal_form_stand")
+    join_by_ <- c(.col_country, "legal_form_orig")
+  }
 
-  tab_ <- standardize_data(.tab, .col)
+  tab_ <- standardize_data(.tab, .col_name)
   lf_ <- unique(tab_lf_[["legal_form_orig"]])
-  nm_ <- tab_[[.col]]
+  nm_ <- tab_[[.col_name]]
 
   f_ <- carrier::crate(function(.lf, .nm) which(endsWith(.nm, paste0(" ", .lf))))
   future::plan("multisession", workers = .workers)
@@ -51,30 +74,34 @@ extract_legal_form <- function(.tab, .col, .legal_forms = data.frame(), .workers
   tab_ %>%
     dplyr::mutate(tmp = dplyr::row_number()) %>%
     dplyr::left_join(lf_ext_, by = "tmp") %>%
-    dplyr::left_join(tab_lf_, by = c("iso3", "legal_form_orig")) %>%
-    dplyr::rename(legal_form = legal_form_stand) %>%
-    dplyr::relocate(legal_form, .after = !!dplyr::sym(.col)) %>%
+    dplyr::left_join(tab_lf_, by = join_by_) %>%
+    dplyr::rename(
+      lf_stand = legal_form_stand, 
+      lf_orig = legal_form_orig
+      ) %>%
+    dplyr::relocate(lf_stand, .after = !!dplyr::sym(.col_name)) %>%
+    dplyr::relocate(lf_orig, .after = !!dplyr::sym(.col_name)) %>%
     dplyr::mutate(
-      !!dplyr::sym(paste0(.col, "_adj")) := trimws(
-        stringi::stri_replace_last_fixed(name, legal_form_orig, "")
+      !!dplyr::sym(paste0(.col_name, "_adj")) := trimws(
+        stringi::stri_replace_last_fixed(name, lf_orig, "")
       ),
-      .after = !!dplyr::sym(.col)
+      .after = !!dplyr::sym(.col_name)
     ) %>%
     dplyr::mutate(
-      !!dplyr::sym(paste0(.col, "_adj")) := dplyr::if_else(
-        condition = is.na(!!dplyr::sym(paste0(.col, "_adj"))),
-        true = !!dplyr::sym(.col), 
-        false = !!dplyr::sym(paste0(.col, "_adj"))
+      !!dplyr::sym(paste0(.col_name, "_adj")) := dplyr::if_else(
+        condition = is.na(!!dplyr::sym(paste0(.col_name, "_adj"))),
+        true = !!dplyr::sym(.col_name), 
+        false = !!dplyr::sym(paste0(.col_name, "_adj"))
         )) %>%
     dplyr::mutate(
-      !!dplyr::sym(paste0(.col, "_std")) := dplyr::if_else(
-        condition = !is.na(legal_form),
-        true = paste(!!dplyr::sym(paste0(.col, "_adj")), legal_form),
-        false = !!dplyr::sym(paste0(.col, "_adj"))
+      !!dplyr::sym(paste0(.col_name, "_std")) := dplyr::if_else(
+        condition = !is.na(lf_stand),
+        true = paste(!!dplyr::sym(paste0(.col_name, "_adj")), lf_stand),
+        false = !!dplyr::sym(paste0(.col_name, "_adj"))
       ),
-      .after = !!dplyr::sym(paste0(.col, "_adj"))
+      .after = !!dplyr::sym(paste0(.col_name, "_adj"))
     ) %>%
-    dplyr::select(-legal_form_orig, -tmp)
+    dplyr::select(-tmp)
   
   
 }
