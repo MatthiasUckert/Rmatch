@@ -115,7 +115,9 @@ match_complete <- function(
     .score = score_,
     .source = source_,
     .target = target_,
-    .col_score = cols_score_
+    .cols_match = .cols_match,
+    .col_score = cols_score_,
+    .min_sim = .min_sim
   )
   
 }

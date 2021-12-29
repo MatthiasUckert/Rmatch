@@ -117,12 +117,13 @@ dedup_data <- function(
     dplyr::mutate(
       len_s = lengths(all_s),
       len_t = lengths(all_t)
-    ) %>%
-    dplyr::select(
-      id_s, id_t, n_s, n_t, all_s, all_t, len_s, len_t,
-      dplyr::starts_with("sim_"), sms, smw, smc, sss, ssw, ssc,
-      dplyr::everything()
     )
   
-  tab_[, c(colnames(tab_)[!colnames(tab_) %in% col_e_], col_e_)]
+  cols_use_ <- colnames(tab_)
+  cols_use_ <- cols_use_[cols_use_ %in% c(
+    "id_s", "id_t", "n_s", "n_t", "all_s", "all_t", "len_s", "len_t",
+    paste0("sim_", .cols_match), "sms", "smw", "smc", "sss", "ssw", "ssc"
+  )]
+  
+  tab_[, c(cols_use_, col_e_)]
 }
