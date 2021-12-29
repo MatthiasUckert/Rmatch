@@ -101,7 +101,8 @@ extract_legal_form <- function(
       ),
       .after = !!dplyr::sym(paste0(.col_name, "_adj"))
     ) %>%
-    dplyr::select(-tmp)
+    dplyr::select(-tmp) %>%
+    dplyr::mutate(!!dplyr::sym(.col_name) := .tab[[.col_name]])
   
   
 }
